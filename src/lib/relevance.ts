@@ -28,11 +28,15 @@ export const bandCopy: Record<RelevanceBand, { label: string; detail: string }> 
 const normalize = (s: string) =>
   s.toLowerCase().replace(/\s+/g, ' ').replace(/[−–]/g, '-')
 
+// Below this many words the file is probably scanned or image-only.
+export const MIN_WORDS = 40
+
+export const countWords = (text: string) => normalize(text).split(' ').filter(Boolean).length
+
 export function scoreRelevance(text: string, lesson: Lesson): RelevanceResult {
   const body = normalize(text)
-  const words = body.split(' ').filter(Boolean).length
 
-  if (words < 40) {
+  if (countWords(text) < MIN_WORDS) {
     return {
       score: 0,
       band: 'review',

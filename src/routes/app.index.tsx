@@ -1,17 +1,19 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowRight, BookOpen, Flame, FolderOpen, Trophy } from 'lucide-react'
+import { ArrowRight, BookOpen, FolderOpen, Gamepad2, Trophy } from 'lucide-react'
 
 import { PageHeader } from '@/components/app-shell'
 import { SubmissionRow } from '@/components/submission-bits'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { currentUser, lessonProgress, mySubmissions, streakDays } from '@/data/fixtures'
 import { lessons, topics } from '@/data/lessons'
 import { questions } from '@/data/quizzes'
-import { useProgress } from '@/lib/progress'
+import { lessonPct, useProgress } from '@/lib/progress'
+import { inReview } from '@/lib/submissions'
+import { listMySubmissions } from '@/lib/submissions.functions'
 
 export const Route = createFileRoute('/app/')({
   head: () => ({ meta: [{ title: 'Home · MathConnect' }] }),
+  loader: () => listMySubmissions(),
   component: Home,
 })
 
@@ -30,21 +32,25 @@ function StatCard({ icon: Icon, label, value, sub, pct }: { icon: typeof BookOpe
 }
 
 function Home() {
+  const { viewer } = Route.useRouteContext()
+  const mySubmissions = Route.useLoaderData()
   const { progress } = useProgress()
-  const done = lessons.filter((l) => lessonProgress[l.id] === 100).length
+  const pctFor = (id: string) => lessonPct(progress, id)
+  const done = lessons.filter((l) => pctFor(l.id) === 100).length
   const correct = Object.values(progress.answered).filter(Boolean).length
-  const pendingUploads = mySubmissions.filter((s) => s.status !== 'approved' && s.status !== 'rejected').length
-  const next = lessons.find((l) => (lessonProgress[l.id] ?? 0) < 100)!
+  const pendingUploads = mySubmissions.filter(inReview).length
+  const gamesPlayed = Object.keys(progress.gameBest).length
+  const next = lessons.find((l) => pctFor(l.id) < 100) ?? lessons[0]
 
   return (
     <>
-      <PageHeader title={`Hi, ${currentUser.name.split(' ')[0]}`} description="Here’s where you left off." />
+      <PageHeader title={`Hi, ${viewer.name.split(' ')[0]}`} description="Here’s where you left off." />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={BookOpen} label="Lessons completed" value={`${done}/${lessons.length}`} sub="Across all three topics" pct={(done / lessons.length) * 100} />
         <StatCard icon={Trophy} label="Quiz questions mastered" value={`${correct}/${questions.length}`} sub="Answered correctly at least once" pct={(correct / questions.length) * 100} />
         <StatCard icon={FolderOpen} label="Uploads in review" value={String(pendingUploads)} sub={`${mySubmissions.length} submitted in total`} />
-        <StatCard icon={Flame} label="Study streak" value={`${streakDays} days`} sub="Keep it going today" />
+        <StatCard icon={Gamepad2} label="Games played" value={`${gamesPlayed}/5`} sub="Best scores are saved" pct={(gamesPlayed / 5) * 100} />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -59,7 +65,7 @@ function Home() {
                 Resume lesson <ArrowRight />
               </Link>
             </Button>
-            <span className="text-sm text-muted-foreground">{lessonProgress[next.id] ?? 0}% complete</span>
+            <span className="text-sm text-muted-foreground">{pctFor(next.id)}% complete</span>
           </div>
         </section>
 
@@ -68,7 +74,7 @@ function Home() {
           <ul className="mt-4 space-y-5">
             {topics.map((t) => {
               const ls = lessons.filter((l) => l.topic === t.id)
-              const pct = Math.round(ls.reduce((a, l) => a + (lessonProgress[l.id] ?? 0), 0) / ls.length)
+              const pct = Math.round(ls.reduce((a, l) => a + pctFor(l.id), 0) / ls.length)
               return (
                 <li key={t.id}>
                   <div className="mb-1.5 flex justify-between text-sm">
@@ -91,9 +97,11 @@ function Home() {
           </Link>
         </div>
         <div className="divide-y">
-          {mySubmissions.slice(0, 3).map((s) => (
-            <SubmissionRow key={s.id} s={s} />
-          ))}
+          {mySubmissions.length === 0 ? (
+            <p className="py-6 text-sm text-muted-foreground">You haven’t uploaded anything yet.</p>
+          ) : (
+            mySubmissions.slice(0, 3).map((s) => <SubmissionRow key={s.id} s={s} />)
+          )}
         </div>
       </section>
     </>

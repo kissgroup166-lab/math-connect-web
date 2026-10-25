@@ -3,8 +3,8 @@ import { CheckCircle2, Clock } from 'lucide-react'
 
 import { PageHeader } from '@/components/app-shell'
 import { Progress } from '@/components/ui/progress'
-import { lessonProgress } from '@/data/fixtures'
 import { lessons, topics } from '@/data/lessons'
+import { lessonPct, useProgress } from '@/lib/progress'
 
 export const Route = createFileRoute('/app/learn/')({
   head: () => ({ meta: [{ title: 'Learn · MathConnect' }] }),
@@ -12,6 +12,7 @@ export const Route = createFileRoute('/app/learn/')({
 })
 
 function Learn() {
+  const { progress } = useProgress()
   return (
     <>
       <PageHeader title="Learn" description="Nine lessons across three topics. Each one has formulas, an explanation, worked examples, and practice." />
@@ -26,7 +27,7 @@ function Learn() {
               {lessons
                 .filter((l) => l.topic === t.id)
                 .map((l) => {
-                  const pct = lessonProgress[l.id] ?? 0
+                  const pct = lessonPct(progress, l.id)
                   return (
                     <Link
                       key={l.id}

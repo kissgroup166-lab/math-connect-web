@@ -4,17 +4,18 @@ import { ArrowLeft, Check, FileText, Lightbulb, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { approvedMaterials } from '@/data/fixtures'
 import { getLesson, getTopic, lessons, type PracticeItem, type WorkedExample } from '@/data/lessons'
+import { fileUrl } from '@/lib/submissions'
+import { listApproved } from '@/lib/submissions.functions'
 import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/app/learn/$lessonId')({
-  loader: ({ params }) => {
+  loader: async ({ params }) => {
     const lesson = getLesson(params.lessonId)
     if (!lesson) throw notFound()
-    return lesson
+    return { lesson, materials: await listApproved({ data: { lessonId: lesson.id } }) }
   },
-  head: ({ loaderData }) => ({ meta: [{ title: `${loaderData?.title ?? 'Lesson'} · MathConnect` }] }),
+  head: ({ loaderData }) => ({ meta: [{ title: `${loaderData?.lesson.title ?? 'Lesson'} · MathConnect` }] }),
   component: LessonPage,
 })
 
@@ -92,11 +93,10 @@ function Practice({ item, n }: { item: PracticeItem; n: number }) {
 }
 
 function LessonPage() {
-  const lesson = Route.useLoaderData()
+  const { lesson, materials } = Route.useLoaderData()
   const topic = getTopic(lesson.topic)
   const idx = lessons.findIndex((l) => l.id === lesson.id)
   const next = lessons[idx + 1]
-  const materials = approvedMaterials.filter((m) => m.lessonId === lesson.id)
 
   return (
     <article key={lesson.id}>
@@ -154,7 +154,9 @@ function LessonPage() {
                   <li key={m.id} className="flex items-start gap-2 text-sm">
                     <FileText className="mt-0.5 size-4 shrink-0 text-destructive" />
                     <span>
-                      {m.title}
+                      <a href={fileUrl(m.id)} target="_blank" rel="noreferrer" className="hover:underline">
+                        {m.title}
+                      </a>
                       <span className="block text-xs text-muted-foreground">by {m.ownerName}</span>
                     </span>
                   </li>

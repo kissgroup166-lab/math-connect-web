@@ -1,0 +1,14 @@
+# Runs the app container. Start Supabase first with `npm run db:start`
+# (the Supabase CLI runs its own Docker containers on ports 54321–54324).
+services:
+  web:
+    build: .
+    ports:
+      - '3000:3000'
+    env_file: .env
+    environment:
+      # Inside the container, the host's Supabase is reached through host.docker.internal.
+      SUPABASE_URL: ${DOCKER_SUPABASE_URL:-http://host.docker.internal:54321}
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    restart: unless-stopped

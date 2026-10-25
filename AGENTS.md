@@ -2,7 +2,7 @@
 
 This document describes the project for developers and AI agents working on this codebase.
 
-> **Continue from [PLAN.md](PLAN.md).** Milestone 1 (the product surface) is complete. The next milestone is Supabase auth and roles, followed by the PDF upload pipeline.
+> **Continue from [PLAN.md](PLAN.md).** Milestones 1–3 are complete (product surface, Supabase auth and roles, PDF upload pipeline). Next is Milestone 4: progress tables and content management.
 
 ## Project Overview
 
@@ -10,11 +10,15 @@ This document describes the project for developers and AI agents working on this
 
 ### MathConnect architecture
 
-- `src/routes/index.tsx`: the landing page. `login.tsx`, `signup.tsx`, and `forgot-password.tsx` are the auth screens (UI only for now).
+- `src/routes/index.tsx`: the landing page. `login.tsx`, `signup.tsx`, `forgot-password.tsx`, and `reset-password.tsx` are the auth screens. `auth.callback.ts` exchanges email-link codes for a session. `api.files.$id.ts` streams PDFs after an RLS check.
 - `src/routes/app.tsx`: the dashboard layout (`AppShell` in `src/components/app-shell.tsx`, with the sidebar and topic search). Child routes: `app.index` (Home), `app.learn.index`, `app.learn.$lessonId`, `app.quizzes` (`?topic=` starts a quiz), `app.games.index`, `app.games.$gameId`, `app.materials`, `app.shared`, `app.profile`, and `app.admin`.
 - `src/data/lessons.ts`: the **real** content for 9 lessons, with formulas, explanations, examples, practice, and the `keywords` used for relevance scoring.
 - `src/data/quizzes.ts`: the **real** bank of 30 questions.
-- `src/data/fixtures.ts`: **stubs only**. Holds the current user, users, submissions, and lesson progress. Replace them with Supabase queries; don't add stubs anywhere else.
+- `src/lib/supabase.server.ts`: the server-only Supabase client (cookie session) and `requireViewer`/`requireAdmin`. The browser never talks to Supabase directly.
+- `src/lib/*.functions.ts`: server functions for auth, submissions (including the upload pipeline), and users. `pdf-check.server.ts` extracts text with unpdf and picks the queue status. It never returns `approved`.
+- `src/lib/submissions.ts`: shared submission and user types and the status copy.
+- `supabase/migrations/`: the schema, triggers, RLS, and Storage policies. `scripts/create-admin.mjs` creates the single admin.
+- `/app` routes require a session (`beforeLoad` in `app.tsx`), and `/app/admin` requires the admin role.
 - `src/lib/relevance.ts`: a pure `scoreRelevance(text, lesson)` and its bands (80+ relevant and pending approval, 50–79 needs review, under 50 unrelated). Short or empty text is flagged for manual review. Scores never auto-publish anything.
 - `src/lib/progress.ts`: `useProgress()` saves quiz and game progress to localStorage. It will be swapped for Supabase tables.
 - `src/components/games/`: one file per game, registered in `index.ts`. Each game takes `{ onFinish(score), best }`.
@@ -23,7 +27,9 @@ This document describes the project for developers and AI agents working on this
 ### Non-obvious decisions
 
 - The admin role is never selectable at signup or in the user table. It's reserved for the owner, and later enforced in the database by a trigger and RLS (see PLAN.md).
-- The backend is the owner's existing Supabase project, not Netlify Database. Supabase credentials are not configured yet.
+- The backend is Supabase, not Netlify Database. Locally it's the Supabase CLI (`npm run db:start`). Env vars are in `.env.example`.
+- Docker: `TARGET=node vite build` drops the Netlify plugin, and `server.mjs` (srvx) serves the build. See `Dockerfile` and `docker-compose.yml`.
+- Lesson progress is derived from the quiz questions answered correctly (`lessonPct` in `progress.ts`).
 - Fonts: Bricolage Grotesque (headings), Figtree (body), JetBrains Mono (`.math` class for formulas). `.graph-paper` is a utility in `styles.css`.
 
 ### Tech Stack

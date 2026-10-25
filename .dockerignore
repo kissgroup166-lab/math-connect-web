@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.netlify
+.tanstack
+.claude
+.env
+.env.*
+!.env.example
+supabase/.temp
+coverage
+*.log

@@ -1,8 +1,8 @@
 import { FileText } from 'lucide-react'
 
-import { statusCopy, type Submission, type SubmissionStatus } from '@/data/fixtures'
 import { getLesson } from '@/data/lessons'
 import { bandCopy, type RelevanceBand } from '@/lib/relevance'
+import { statusCopy, type Submission, type SubmissionStatus } from '@/lib/submissions'
 import { cn } from '@/lib/utils'
 
 export function StatusBadge({ status }: { status: SubmissionStatus }) {

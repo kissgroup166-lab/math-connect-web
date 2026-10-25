@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
-import { ChevronDown, FolderOpen, Info, UploadCloud } from 'lucide-react'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { ChevronDown, ExternalLink, FolderOpen, Info, Loader2, UploadCloud } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/app-shell'
@@ -10,19 +10,20 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { currentUser, mySubmissions, type Submission } from '@/data/fixtures'
 import { lessons, topics } from '@/data/lessons'
+import { fileUrl, inReview, MAX_UPLOAD_BYTES, MAX_UPLOAD_MB, type Submission } from '@/lib/submissions'
+import { listMySubmissions, uploadSubmission } from '@/lib/submissions.functions'
 import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/app/materials')({
   head: () => ({ meta: [{ title: 'My Materials · MathConnect' }] }),
+  loader: () => listMySubmissions(),
   component: MyMaterials,
 })
 
-const MAX_BYTES = 10 * 1024 * 1024
 const filters = {
   all: () => true,
-  review: (s: Submission) => ['queued', 'pending', 'review', 'flagged'].includes(s.status),
+  review: inReview,
   approved: (s: Submission) => s.status === 'approved',
   rejected: (s: Submission) => s.status === 'rejected',
 } as const
@@ -30,18 +31,19 @@ const filters = {
 function validate(file: File): string | null {
   const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
   if (!isPdf) return 'Only PDF files can be uploaded.'
-  if (file.size > MAX_BYTES) return `This file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 10 MB.`
+  if (file.size > MAX_UPLOAD_BYTES) return `This file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is ${MAX_UPLOAD_MB} MB.`
   if (file.size === 0) return 'This file is empty.'
   return null
 }
 
-function UploadCard({ onSubmit }: { onSubmit: (s: Submission) => void }) {
+function UploadCard({ onUploaded }: { onUploaded: () => Promise<void> }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const [lessonId, setLessonId] = useState('')
   const [title, setTitle] = useState('')
+  const [busy, setBusy] = useState(false)
 
   function take(f: File | undefined) {
     if (!f) return
@@ -51,34 +53,42 @@ function UploadCard({ onSubmit }: { onSubmit: (s: Submission) => void }) {
     if (!err && !title) setTitle(f.name.replace(/\.pdf$/i, '').replace(/[-_]+/g, ' '))
   }
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!file || !lessonId) return
-    onSubmit({
-      id: `local-${Date.now()}`,
-      title: title.trim() || file.name,
-      fileName: file.name,
-      sizeKb: Math.round(file.size / 1024),
-      lessonId,
-      ownerName: currentUser.name,
-      ownerRole: 'student',
-      uploadedAt: new Date().toISOString(),
-      score: null,
-      band: null,
-      explanation: 'Text extraction and relevance scoring run on the server after upload.',
-      status: 'queued',
-      flags: [],
-    })
-    setFile(null)
-    setTitle('')
-    setLessonId('')
-    toast.success('PDF submitted', { description: 'It stays private until an admin approves it.' })
+    if (!file || !lessonId || busy) return
+    const form = new FormData()
+    form.set('file', file)
+    form.set('lessonId', lessonId)
+    form.set('title', title.trim())
+    setBusy(true)
+    try {
+      const res = await uploadSubmission({ data: form })
+      await onUploaded()
+      setFile(null)
+      setTitle('')
+      setLessonId('')
+      if (inputRef.current) inputRef.current.value = ''
+      toast.success('PDF submitted', {
+        description:
+          res.score === null
+            ? 'We couldn’t read its text, so the admin will check it by hand.'
+            : `Relevance ${res.score}%. It stays private until an admin approves it.`,
+      })
+    } catch (err) {
+      toast.error('Upload failed', {
+        description: err instanceof Error ? err.message : 'Try again.',
+      })
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
     <form onSubmit={submit} className="rounded-2xl border bg-card p-6">
       <h2 className="font-semibold">Upload a PDF</h2>
-      <p className="text-sm text-muted-foreground">Share notes or worksheets for a lesson. They stay private until an admin reviews them.</p>
+      <p className="text-sm text-muted-foreground">
+        Share notes or worksheets for a lesson. They stay private until an admin reviews them.
+      </p>
 
       <div
         role="button"
@@ -112,11 +122,20 @@ function UploadCard({ onSubmit }: { onSubmit: (s: Submission) => void }) {
           </>
         ) : (
           <>
-            <p className="mt-4 font-semibold">Drop your PDF here, or <span className="text-primary underline">browse</span></p>
-            <p className="text-sm text-muted-foreground">PDF only · up to 10 MB</p>
+            <p className="mt-4 font-semibold">
+              Drop your PDF here, or <span className="text-primary underline">browse</span>
+            </p>
+            <p className="text-sm text-muted-foreground">PDF only · up to {MAX_UPLOAD_MB} MB</p>
           </>
         )}
-        <input ref={inputRef} type="file" accept="application/pdf,.pdf" className="sr-only" tabIndex={-1} onChange={(e) => take(e.target.files?.[0])} />
+        <input
+          ref={inputRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          className="sr-only"
+          tabIndex={-1}
+          onChange={(e) => take(e.target.files?.[0])}
+        />
       </div>
       {error && (
         <p className="mt-2 text-sm text-destructive" role="alert">
@@ -152,8 +171,9 @@ function UploadCard({ onSubmit }: { onSubmit: (s: Submission) => void }) {
           <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Double-angle cheat sheet" />
         </div>
       </div>
-      <Button type="submit" className="mt-5" disabled={!file || !lessonId}>
-        <UploadCloud /> Submit for review
+      <Button type="submit" className="mt-5" disabled={!file || !lessonId || busy}>
+        {busy ? <Loader2 className="animate-spin motion-reduce:animate-none" /> : <UploadCloud />}
+        {busy ? 'Checking relevance…' : 'Submit for review'}
       </Button>
     </form>
   )
@@ -161,9 +181,24 @@ function UploadCard({ onSubmit }: { onSubmit: (s: Submission) => void }) {
 
 function ScoreGuide() {
   const rows = [
-    { range: '80–100%', label: 'Relevant', detail: 'Goes to the admin for approval.', tone: 'bg-success' },
-    { range: '50–79%', label: 'Needs review', detail: 'An admin checks it by hand.', tone: 'bg-chart-2' },
-    { range: '0–49%', label: 'Likely unrelated', detail: 'Recommended for rejection.', tone: 'bg-destructive' },
+    {
+      range: '80–100%',
+      label: 'Relevant',
+      detail: 'Goes to the admin for approval.',
+      tone: 'bg-success',
+    },
+    {
+      range: '50–79%',
+      label: 'Needs review',
+      detail: 'An admin checks it by hand.',
+      tone: 'bg-chart-2',
+    },
+    {
+      range: '0–49%',
+      label: 'Likely unrelated',
+      detail: 'Recommended for rejection.',
+      tone: 'bg-destructive',
+    },
   ]
   return (
     <aside className="rounded-2xl border bg-card p-6">
@@ -185,14 +220,16 @@ function ScoreGuide() {
         ))}
       </ul>
       <p className="mt-4 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
-        Scores are estimates. Scanned, encrypted, or unreadable files are flagged for manual review. Nothing is published from the score alone.
+        Scores are estimates. Scanned, encrypted, or unreadable files are flagged for manual review. Nothing is published from the score
+        alone.
       </p>
     </aside>
   )
 }
 
 function MyMaterials() {
-  const [items, setItems] = useState<Submission[]>(mySubmissions)
+  const items = Route.useLoaderData()
+  const router = useRouter()
   const [filter, setFilter] = useState<keyof typeof filters>('all')
   const [openId, setOpenId] = useState<string | null>(null)
   const shown = items.filter(filters[filter])
@@ -201,7 +238,7 @@ function MyMaterials() {
     <>
       <PageHeader title="My Materials" description="Upload PDFs for a lesson and track each one from review to approval." />
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-        <UploadCard onSubmit={(s) => setItems((prev) => [s, ...prev])} />
+        <UploadCard onUploaded={() => router.invalidate()} />
         <ScoreGuide />
       </div>
 
@@ -233,7 +270,13 @@ function MyMaterials() {
                 <SubmissionRow
                   s={s}
                   action={
-                    <Button variant="ghost" size="icon-sm" aria-label="Show details" aria-expanded={openId === s.id} onClick={() => setOpenId(openId === s.id ? null : s.id)}>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Show details"
+                      aria-expanded={openId === s.id}
+                      onClick={() => setOpenId(openId === s.id ? null : s.id)}
+                    >
                       <ChevronDown className={cn('transition-transform', openId === s.id && 'rotate-180')} />
                     </Button>
                   }
@@ -251,7 +294,17 @@ function MyMaterials() {
                         {s.adminFeedback}
                       </p>
                     )}
-                    <p className="text-xs text-muted-foreground">Submitted {new Date(s.uploadedAt).toLocaleString()}</p>
+                    <p className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      Submitted {new Date(s.uploadedAt).toLocaleString()}
+                      <a
+                        href={fileUrl(s.id)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                      >
+                        Open PDF <ExternalLink className="size-3" />
+                      </a>
+                    </p>
                   </div>
                 )}
               </li>

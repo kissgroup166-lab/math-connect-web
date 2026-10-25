@@ -1,21 +1,26 @@
-import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Download, FileText, FolderOpen } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/app-shell'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { approvedMaterials } from '@/data/fixtures'
 import { lessons, topics, type TopicId } from '@/data/lessons'
+import { fileUrl } from '@/lib/submissions'
+import { listApproved } from '@/lib/submissions.functions'
 
 export const Route = createFileRoute('/app/shared')({
   head: () => ({ meta: [{ title: 'Shared Materials · MathConnect' }] }),
+  validateSearch: (s: Record<string, unknown>): { topic?: TopicId } =>
+    ['trig', 'exp', 'log'].includes(s.topic as string) ? { topic: s.topic as TopicId } : {},
+  loader: () => listApproved({ data: {} }),
   component: Shared,
 })
 
 function Shared() {
-  const [topic, setTopic] = useState<TopicId | 'all'>('all')
+  const approvedMaterials = Route.useLoaderData()
+  const topic = Route.useSearch().topic ?? 'all'
+  const navigate = Route.useNavigate()
+  const setTopic = (t: TopicId | 'all') => navigate({ search: t === 'all' ? {} : { topic: t }, replace: true })
   const visible = lessons.filter((l) => topic === 'all' || l.topic === topic)
 
   return (
@@ -63,18 +68,17 @@ function Shared() {
                     <li key={f.id} className="flex items-center gap-3 rounded-xl bg-muted p-3">
                       <FileText className="size-8 shrink-0 text-destructive" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{f.title}</p>
+                        <a href={fileUrl(f.id)} target="_blank" rel="noreferrer" className="block truncate text-sm font-medium hover:underline">
+                          {f.title}
+                        </a>
                         <p className="text-xs text-muted-foreground">
                           {f.ownerName} · <span className="capitalize">{f.ownerRole}</span> · {(f.sizeKb / 1024).toFixed(1)} MB
                         </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`Download ${f.title}`}
-                        onClick={() => toast('Downloads open once file storage is connected')}
-                      >
-                        <Download />
+                      <Button asChild variant="ghost" size="icon-sm">
+                        <a href={fileUrl(f.id, true)} aria-label={`Download ${f.title}`}>
+                          <Download />
+                        </a>
                       </Button>
                     </li>
                   ))}

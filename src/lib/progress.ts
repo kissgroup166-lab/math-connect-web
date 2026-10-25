@@ -2,6 +2,8 @@
 // milestone swaps this for a Supabase `progress` table (see PLAN.md).
 import { useCallback, useEffect, useState } from 'react'
 
+import { questions } from '@/data/quizzes'
+
 export interface ProgressState {
   quizBest: Record<string, number> // topic -> best % score
   quizAttempts: Record<string, number>
@@ -33,4 +35,11 @@ export function useProgress() {
   }, [])
 
   return { progress: state, update }
+}
+
+// A lesson's progress is the share of its quiz questions answered correctly at least once.
+export function lessonPct(progress: ProgressState, lessonId: string) {
+  const qs = questions.filter((q) => q.lessonId === lessonId)
+  if (qs.length === 0) return 0
+  return Math.round((qs.filter((q) => progress.answered[q.id]).length / qs.length) * 100)
 }

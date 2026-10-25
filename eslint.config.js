@@ -13,4 +13,9 @@ export default tseslint.config(
     plugins: { 'react-hooks': reactHooks },
     rules: reactHooks.configs.recommended.rules,
   },
+  {
+    // Node scripts (server.mjs, scripts/*.mjs).
+    files: ['**/*.mjs'],
+    languageOptions: { globals: { process: 'readonly', console: 'readonly', Response: 'readonly' } },
+  },
 )

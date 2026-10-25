@@ -1,19 +1,26 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { useState } from 'react'
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/app-shell'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { currentUser, mySubmissions } from '@/data/fixtures'
+import { updateProfile } from '@/lib/auth.functions'
 import { useProgress } from '@/lib/progress'
+import { listMySubmissions } from '@/lib/submissions.functions'
 
 export const Route = createFileRoute('/app/profile')({
   head: () => ({ meta: [{ title: 'Profile · MathConnect' }] }),
+  loader: () => listMySubmissions(),
   component: Profile,
 })
 
 function Profile() {
+  const { viewer: currentUser } = Route.useRouteContext()
+  const mySubmissions = Route.useLoaderData()
+  const router = useRouter()
+  const [saving, setSaving] = useState(false)
   const { progress } = useProgress()
   const initials = currentUser.name
     .split(' ')
@@ -47,16 +54,26 @@ function Profile() {
         <div className="space-y-6">
           <form
             className="rounded-2xl border bg-card p-6"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault()
-              toast.success('Profile saved')
+              const name = String(new FormData(e.currentTarget).get('name') ?? '')
+              setSaving(true)
+              try {
+                await updateProfile({ data: { name } })
+                await router.invalidate()
+                toast.success('Profile saved')
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : 'Could not save your profile.')
+              } finally {
+                setSaving(false)
+              }
             }}
           >
             <h2 className="font-semibold">Account details</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="name">Full name</Label>
-                <Input id="name" defaultValue={currentUser.name} required />
+                <Input id="name" name="name" defaultValue={currentUser.name} required maxLength={100} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -64,8 +81,8 @@ function Profile() {
               </div>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">Roles are managed by the admin. Contact them to request teacher access.</p>
-            <Button type="submit" className="mt-4">
-              Save changes
+            <Button type="submit" className="mt-4" disabled={saving}>
+              {saving ? 'Saving…' : 'Save changes'}
             </Button>
           </form>
 

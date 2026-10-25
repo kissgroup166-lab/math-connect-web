@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { AlertTriangle, BookOpen, Check, Eye, FileText, Gamepad2, ShieldCheck, Trophy, X } from 'lucide-react'
+import { createFileRoute, Link, redirect, useRouter } from '@tanstack/react-router'
+import { AlertTriangle, BookOpen, Check, ExternalLink, Eye, Gamepad2, ShieldCheck, Trophy, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/app-shell'
@@ -14,23 +14,42 @@ import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { submissions as seedSubmissions, users as seedUsers, type AppUser, type Submission } from '@/data/fixtures'
 import { getLesson, getTopic, lessons } from '@/data/lessons'
 import { questions } from '@/data/quizzes'
+import { fileUrl, inReview, type AppUser, type Submission } from '@/lib/submissions'
+import { listAllSubmissions, reviewSubmission } from '@/lib/submissions.functions'
+import { listUsers, updateUser } from '@/lib/users.functions'
 
 export const Route = createFileRoute('/app/admin')({
   head: () => ({ meta: [{ title: 'Admin · MathConnect' }] }),
+  beforeLoad: ({ context }) => {
+    if (context.viewer.role !== 'admin') throw redirect({ to: '/app' })
+  },
+  loader: async () => {
+    const [submissions, users] = await Promise.all([listAllSubmissions(), listUsers()])
+    return { submissions, users }
+  },
   component: Admin,
 })
 
 const queues = {
-  pending: (s: Submission) => ['queued', 'pending', 'review', 'flagged'].includes(s.status),
+  pending: inReview,
   approved: (s: Submission) => s.status === 'approved',
   rejected: (s: Submission) => s.status === 'rejected',
 } as const
 
-function ReviewDialog({ s, onClose, onDecide }: { s: Submission | null; onClose: () => void; onDecide: (id: string, approve: boolean, feedback: string) => void }) {
-  const [feedback, setFeedback] = useState('')
+function ReviewDialog({
+  s,
+  busy,
+  onClose,
+  onDecide,
+}: {
+  s: Submission | null
+  busy: boolean
+  onClose: () => void
+  onDecide: (id: string, approve: boolean, feedback: string) => void
+}) {
+  const [feedback, setFeedback] = useState(s?.adminFeedback ?? '')
   const lesson = s ? getLesson(s.lessonId) : undefined
   return (
     <Dialog open={!!s} onOpenChange={(o) => !o && onClose()}>
@@ -44,10 +63,19 @@ function ReviewDialog({ s, onClose, onDecide }: { s: Submission | null; onClose:
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 md:grid-cols-[12rem_1fr]">
-              <div className="graph-paper flex aspect-[3/4] flex-col items-center justify-center gap-2 rounded-xl border text-center">
-                <FileText className="size-10 text-destructive" />
-                <span className="px-3 text-xs break-all text-muted-foreground">{s.fileName}</span>
-                <span className="text-xs text-muted-foreground">{(s.sizeKb / 1024).toFixed(1)} MB</span>
+              <div className="flex flex-col gap-2">
+                <iframe src={fileUrl(s.id)} title={`Preview of ${s.fileName}`} className="aspect-[3/4] w-full rounded-xl border bg-muted" />
+                <a
+                  href={fileUrl(s.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  Open full size <ExternalLink className="size-3" />
+                </a>
+                <span className="text-xs break-all text-muted-foreground">
+                  {s.fileName} · {(s.sizeKb / 1024).toFixed(1)} MB
+                </span>
               </div>
               <div className="space-y-3 text-sm">
                 <ScoreMeter score={s.score} band={s.band} />
@@ -57,18 +85,25 @@ function ReviewDialog({ s, onClose, onDecide }: { s: Submission | null; onClose:
                     <AlertTriangle className="size-4" /> {s.flags.join(', ')} — check this file by hand
                   </p>
                 )}
-                <p className="text-xs text-muted-foreground">The score is an estimate. Approving publishes the file to Shared Materials under this lesson.</p>
+                <p className="text-xs text-muted-foreground">
+                  The score is an estimate. Approving publishes the file to Shared Materials under this lesson.
+                </p>
                 <div className="space-y-2">
                   <Label htmlFor="feedback">Feedback to uploader</Label>
-                  <Textarea id="feedback" value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="Optional for approvals, recommended for rejections" />
+                  <Textarea
+                    id="feedback"
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    placeholder="Optional for approvals, recommended for rejections"
+                  />
                 </div>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => onDecide(s.id, false, feedback)}>
+              <Button variant="outline" disabled={busy} onClick={() => onDecide(s.id, false, feedback)}>
                 <X /> Reject
               </Button>
-              <Button onClick={() => onDecide(s.id, true, feedback)}>
+              <Button disabled={busy} onClick={() => onDecide(s.id, true, feedback)}>
                 <Check /> Approve & publish
               </Button>
             </DialogFooter>
@@ -79,16 +114,25 @@ function ReviewDialog({ s, onClose, onDecide }: { s: Submission | null; onClose:
   )
 }
 
-function SubmissionsPanel() {
-  const [items, setItems] = useState(seedSubmissions)
+function SubmissionsPanel({ items }: { items: Submission[] }) {
+  const router = useRouter()
   const [queue, setQueue] = useState<keyof typeof queues>('pending')
   const [reviewing, setReviewing] = useState<Submission | null>(null)
+  const [busy, setBusy] = useState(false)
   const shown = items.filter(queues[queue])
 
-  function decide(id: string, approve: boolean, feedback: string) {
-    setItems((prev) => prev.map((s) => (s.id === id ? { ...s, status: approve ? 'approved' : 'rejected', adminFeedback: feedback || undefined } : s)))
-    setReviewing(null)
-    toast.success(approve ? 'Approved and published' : 'Submission rejected')
+  async function decide(id: string, approve: boolean, feedback: string) {
+    setBusy(true)
+    try {
+      await reviewSubmission({ data: { id, approve, feedback } })
+      await router.invalidate()
+      setReviewing(null)
+      toast.success(approve ? 'Approved and published' : 'Submission rejected')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not save the decision.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -150,14 +194,26 @@ function SubmissionsPanel() {
           </TableBody>
         </Table>
       </div>
-      <ReviewDialog key={reviewing?.id} s={reviewing} onClose={() => setReviewing(null)} onDecide={decide} />
+      <ReviewDialog key={reviewing?.id} s={reviewing} busy={busy} onClose={() => setReviewing(null)} onDecide={decide} />
     </>
   )
 }
 
-function UsersPanel() {
-  const [list, setList] = useState<AppUser[]>(seedUsers)
-  const patch = (id: string, p: Partial<AppUser>) => setList((prev) => prev.map((u) => (u.id === id ? { ...u, ...p } : u)))
+function UsersPanel({ list }: { list: AppUser[] }) {
+  const router = useRouter()
+  async function patch(u: AppUser, p: Partial<Pick<AppUser, 'role' | 'canPublish'>>) {
+    if (u.role === 'admin') return
+    const role = p.role === 'teacher' || (p.role === undefined && u.role === 'teacher') ? 'teacher' : 'student'
+    try {
+      await updateUser({
+        data: { id: u.id, role, canPublish: p.canPublish ?? u.canPublish },
+      })
+      await router.invalidate()
+      toast.success(`Updated ${u.name}`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update this user.')
+    }
+  }
 
   return (
     <div className="rounded-2xl border bg-card">
@@ -183,7 +239,15 @@ function UsersPanel() {
                     <ShieldCheck className="size-4" /> Admin (owner)
                   </span>
                 ) : (
-                  <Select value={u.role} onValueChange={(v) => patch(u.id, { role: v as AppUser['role'], canPublish: false })}>
+                  <Select
+                    value={u.role}
+                    onValueChange={(v) =>
+                      patch(u, {
+                        role: v as AppUser['role'],
+                        canPublish: false,
+                      })
+                    }
+                  >
                     <SelectTrigger size="sm" className="w-32" aria-label={`Role for ${u.name}`}>
                       <SelectValue />
                     </SelectTrigger>
@@ -196,7 +260,11 @@ function UsersPanel() {
               </TableCell>
               <TableCell>
                 {u.role === 'teacher' ? (
-                  <Switch checked={!!u.canPublish} onCheckedChange={(c) => patch(u.id, { canPublish: c })} aria-label={`Teacher permissions for ${u.name}`} />
+                  <Switch
+                    checked={!!u.canPublish}
+                    onCheckedChange={(c) => patch(u, { canPublish: c })}
+                    aria-label={`Teacher permissions for ${u.name}`}
+                  />
                 ) : (
                   <span className="text-xs text-muted-foreground">—</span>
                 )}
@@ -207,7 +275,8 @@ function UsersPanel() {
         </TableBody>
       </Table>
       <p className="border-t p-4 text-xs text-muted-foreground">
-        The admin role can’t be assigned from here and belongs only to the site owner. Verified teachers can add quiz questions and lesson notes, but their PDFs still go through admin approval.
+        The admin role can’t be assigned from here and belongs only to the site owner. Verified teachers can add quiz questions and lesson
+        notes, but their PDFs still go through admin approval.
       </p>
     </div>
   )
@@ -215,9 +284,24 @@ function UsersPanel() {
 
 function ContentPanel() {
   const cards = [
-    { icon: BookOpen, label: 'Lessons', value: lessons.length, to: '/app/learn' as const },
-    { icon: Trophy, label: 'Quiz questions', value: questions.length, to: '/app/quizzes' as const },
-    { icon: Gamepad2, label: 'Games', value: games.length, to: '/app/games' as const },
+    {
+      icon: BookOpen,
+      label: 'Lessons',
+      value: lessons.length,
+      to: '/app/learn' as const,
+    },
+    {
+      icon: Trophy,
+      label: 'Quiz questions',
+      value: questions.length,
+      to: '/app/quizzes' as const,
+    },
+    {
+      icon: Gamepad2,
+      label: 'Games',
+      value: games.length,
+      to: '/app/games' as const,
+    },
   ]
   return (
     <div className="grid gap-4 md:grid-cols-3">
@@ -233,6 +317,7 @@ function ContentPanel() {
 }
 
 function Admin() {
+  const { submissions, users } = Route.useLoaderData()
   return (
     <>
       <PageHeader title="Admin" description="Review PDF submissions, manage users and teacher permissions, and oversee course content." />
@@ -243,10 +328,10 @@ function Admin() {
           <TabsTrigger value="content">Content</TabsTrigger>
         </TabsList>
         <TabsContent value="submissions">
-          <SubmissionsPanel />
+          <SubmissionsPanel items={submissions} />
         </TabsContent>
         <TabsContent value="users">
-          <UsersPanel />
+          <UsersPanel list={users} />
         </TabsContent>
         <TabsContent value="content">
           <ContentPanel />
