@@ -38,7 +38,7 @@ Files are served through `/api/files/$id` (an RLS check, then a stream from Stor
 
 ## Milestone 4: Progress and content management
 
-- Add `quiz_attempts`, `game_scores`, and `lesson_progress` tables with owner-only RLS. Replace `useProgress` browser storage and the fixture progress.
+- ✅ Progress is saved per account in one `user_progress` row (owner-only RLS): quiz bests and attempts, questions answered, game bests, and unfinished quizzes, which resume on any device. Browser-saved progress is copied over once. The admin sets random question order and shuffled choices per quiz (`quiz_settings`).
 - ✅ Admin-only content management: `topics`, `lessons`, `questions`, and `error_items` tables (seeded from the old data files), editors under Admin → Topics & lessons, Quizzes, and Games, and a show/hide switch on each item. The admin has its own menu. Teachers can't edit content (owner's decision).
 
 ## Milestone 5: Hardening and QA

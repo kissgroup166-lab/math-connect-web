@@ -2,7 +2,7 @@ import { FileText } from 'lucide-react'
 
 import { useContent } from '@/lib/content'
 import { bandCopy, type RelevanceBand } from '@/lib/relevance'
-import { statusCopy, type Submission, type SubmissionStatus } from '@/lib/submissions'
+import { fileUrl, statusCopy, type Submission, type SubmissionStatus } from '@/lib/submissions'
 import { cn } from '@/lib/utils'
 
 export function StatusBadge({ status }: { status: SubmissionStatus }) {
@@ -31,6 +31,16 @@ export function ScoreMeter({ score, band }: { score: number | null; band: Releva
   )
 }
 
+// The file's name opens the PDF in a new tab. The API route checks the viewer may see it.
+export function FileLink({ s, className }: { s: Pick<Submission, 'id' | 'title'>; className?: string }) {
+  return (
+    <a href={fileUrl(s.id)} target="_blank" rel="noreferrer" title={`Open ${s.title} (PDF, new tab)`} className={cn('hover:text-primary hover:underline', className)}>
+      {s.title}
+      <span className="sr-only"> (opens PDF in a new tab)</span>
+    </a>
+  )
+}
+
 export function SubmissionRow({ s, action }: { s: Submission; action?: React.ReactNode }) {
   const lesson = useContent().getLesson(s.lessonId)
   return (
@@ -39,7 +49,7 @@ export function SubmissionRow({ s, action }: { s: Submission; action?: React.Rea
         <FileText className="size-5" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium">{s.title}</p>
+        <FileLink s={s} className="block truncate font-medium" />
         <p className="truncate text-xs text-muted-foreground">
           {lesson?.title ?? 'Hidden lesson'} · {s.fileName} · {(s.sizeKb / 1024).toFixed(1)} MB
         </p>

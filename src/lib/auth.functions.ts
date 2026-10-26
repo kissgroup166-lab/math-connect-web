@@ -3,6 +3,7 @@ import { getRequestUrl } from '@tanstack/react-start/server'
 import { z } from 'zod'
 
 import { strongPassword as password } from '@/lib/password'
+import type { Viewer } from '@/lib/submissions'
 import { getSupabase, loadViewer, requireViewer } from '@/lib/supabase.server'
 
 const siteUrl = () => process.env.SITE_URL || getRequestUrl().origin
@@ -35,8 +36,12 @@ export const getViewer = createServerFn({ method: 'GET' }).handler(() => loadVie
 export const signIn = createServerFn({ method: 'POST' })
   .validator(z.object({ email, password: z.string().min(1) }))
   .handler(async ({ data }) => {
-    const { error } = await getSupabase().auth.signInWithPassword(data)
+    const sb = getSupabase()
+    const { data: auth, error } = await sb.auth.signInWithPassword(data)
     if (error) throw new Error(error.code === 'email_not_confirmed' ? 'Confirm your email first, then log in.' : 'Email or password is incorrect.')
+    // The login page sends the admin to the admin overview instead of the student home.
+    const { data: profile } = await sb.from('profiles').select('role').eq('id', auth.user.id).single()
+    return { role: (profile?.role ?? 'student') as Viewer['role'] }
   })
 
 // Role is only a hint: the database trigger allows student or teacher, never admin.

@@ -8,7 +8,7 @@ A study platform for **trigonometric identities, exponential functions, and loga
 - Dashboard: Home, Learn, Quizzes, Games, My Materials, Shared Materials, Profile, and Admin (admin only).
 - PDF uploads: checked (PDF, ≤2 MB), stored privately in Supabase Storage, text extracted, scored for relevance, then queued. Nothing is published until the admin approves it.
 - Admin: review queue with in-browser PDF preview, approve/reject with feedback, user roles and teacher verification.
-- Quiz and game progress is saved in the browser (moves to the database in Milestone 4).
+- Quiz and game progress is saved to each user's account, and unfinished quizzes resume where they stopped.
 
 ## Tech
 

@@ -51,6 +51,14 @@ export async function loadViewer(sb: ReturnType<typeof getSupabase>): Promise<Vi
   }
 }
 
+/** The signed-in user's id from the verified session, without loading the profile. */
+export async function requireUserId(sb: ReturnType<typeof getSupabase>) {
+  const { data } = await sb.auth.getClaims()
+  const userId = data?.claims.sub
+  if (!userId) throw new Error('Please log in again.')
+  return userId
+}
+
 export async function requireViewer(sb: ReturnType<typeof getSupabase>) {
   const viewer = await loadViewer(sb)
   if (!viewer) throw new Error('Please log in again.')

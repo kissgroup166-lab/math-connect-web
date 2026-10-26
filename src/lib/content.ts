@@ -65,11 +65,21 @@ export interface ErrorItem {
   published: boolean
 }
 
+// A topic quiz, or `all` for the mixed review.
+export type QuizKey = TopicId | 'all'
+export const quizKeys = ['trig', 'exp', 'log', 'all'] as const satisfies readonly QuizKey[]
+
+export interface QuizSettings {
+  shuffleQuestions: boolean
+  shuffleChoices: boolean
+}
+
 export interface Content {
   topics: Topic[]
   lessons: Lesson[]
   questions: QuizQuestion[]
   errorItems: ErrorItem[]
+  quizSettings: Record<QuizKey, QuizSettings>
 }
 
 export const PASS_MARK = 0.7

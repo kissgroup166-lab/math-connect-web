@@ -3,25 +3,45 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { Check, RotateCcw, Trophy, X } from 'lucide-react'
 
 import { PageHeader } from '@/components/app-shell'
+import { shuffle } from '@/components/games/shared'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { PASS_MARK, useContent, type QuizQuestion, type TopicId } from '@/lib/content'
-import { useProgress } from '@/lib/progress'
+import { Skeleton } from '@/components/ui/skeleton'
+import { PASS_MARK, quizKeys, useContent, type QuizKey, type QuizQuestion, type QuizSettings } from '@/lib/content'
+import { useProgress, type QuizRun } from '@/lib/progress'
 import { cn } from '@/lib/utils'
-
-type QuizKey = TopicId | 'all'
 
 export const Route = createFileRoute('/app/quizzes')({
   validateSearch: (s: Record<string, unknown>): { topic?: QuizKey } =>
-    ['trig', 'exp', 'log', 'all'].includes(s.topic as string) ? { topic: s.topic as QuizKey } : {},
+    (quizKeys as readonly string[]).includes(s.topic as string) ? { topic: s.topic as QuizKey } : {},
   head: () => ({ meta: [{ title: 'Quizzes · MathConnect' }] }),
   component: Quizzes,
 })
 
+// A saved run still fits if its questions exist; questions the admin removed are dropped.
+function usableRun(run: QuizRun | undefined, set: QuizQuestion[]): QuizRun | null {
+  if (!run) return null
+  const ids = new Set(set.map((q) => q.id))
+  const order = run.order.filter((id) => ids.has(id))
+  if (order.length === 0 || run.i >= order.length) return null
+  return { ...run, order, i: Math.min(run.i, order.length - 1) }
+}
+
+function newRun(set: QuizQuestion[], settings: QuizSettings): QuizRun {
+  const order = set.map((q) => q.id)
+  return {
+    order: settings.shuffleQuestions ? shuffle(order) : order,
+    choiceOrders: settings.shuffleChoices ? Object.fromEntries(set.map((q) => [q.id, shuffle(q.choices.map((_, k) => k))])) : {},
+    i: 0,
+    score: 0,
+    picked: null,
+  }
+}
+
 function Quizzes() {
   const { topic } = Route.useSearch()
-  const { progress } = useProgress()
-  const { topics, questions } = useContent()
+  const { progress, loaded } = useProgress()
+  const { topics, questions, quizSettings } = useContent()
   const quizzes: { key: QuizKey; name: string }[] = [
     ...topics.map((t) => ({ key: t.id as QuizKey, name: t.name })),
     { key: 'all', name: `Mixed review — all ${questions.length}` },
@@ -39,23 +59,48 @@ function Quizzes() {
           </Button>
         </div>
       )
-    return <QuizRunner key={topic} quizKey={topic} set={set} name={quizzes.find((q) => q.key === topic)!.name} />
+    // Wait for saved progress so an unfinished quiz resumes instead of restarting.
+    if (!loaded)
+      return (
+        <div className="mx-auto max-w-2xl space-y-4" aria-busy="true" aria-label="Loading quiz">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-1.5 w-full" />
+          <Skeleton className="h-7 w-3/4" />
+          {[0, 1, 2, 3].map((k) => (
+            <Skeleton key={k} className="h-12 w-full rounded-xl" />
+          ))}
+        </div>
+      )
+    return (
+      <QuizRunner
+        key={topic}
+        quizKey={topic}
+        set={set}
+        settings={quizSettings[topic]}
+        name={quizzes.find((q) => q.key === topic)!.name}
+        saved={usableRun(progress.quizRuns[topic], set)}
+      />
+    )
   }
 
   return (
     <>
-      <PageHeader title="Quizzes" description="Instant feedback with explanations. Retry as often as you like and your best score is saved." />
+      <PageHeader
+        title="Quizzes"
+        description="Instant feedback with explanations. Your scores are saved to your account, and an unfinished quiz picks up where you left off."
+      />
       <div className="grid gap-4 md:grid-cols-2">
         {quizzes.map((q) => {
-          const count = setFor(q.key).length
+          const set = setFor(q.key)
           const best = progress.quizBest[q.key]
+          const run = usableRun(progress.quizRuns[q.key], set)
           return (
             <div key={q.key} className="flex flex-col rounded-2xl border bg-card p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="font-display text-lg font-bold">{q.name}</h2>
                   <p className="text-sm text-muted-foreground">
-                    {count} questions · {progress.quizAttempts[q.key] ?? 0} attempts
+                    {set.length} questions · {progress.quizAttempts[q.key] ?? 0} attempts
                   </p>
                 </div>
                 {best !== undefined && (
@@ -64,10 +109,15 @@ function Quizzes() {
                   </span>
                 )}
               </div>
-              {count > 0 ? (
+              {run && (
+                <p className="mt-3 text-sm font-medium text-primary">
+                  In progress · question {run.i + 1} of {run.order.length}
+                </p>
+              )}
+              {set.length > 0 ? (
                 <Button asChild className="mt-6 self-start">
                   <Link to="/app/quizzes" search={{ topic: q.key }}>
-                    {best !== undefined ? 'Retry quiz' : 'Start quiz'}
+                    {run ? 'Resume quiz' : best !== undefined ? 'Retry quiz' : 'Start quiz'}
                   </Link>
                 </Button>
               ) : (
@@ -81,59 +131,84 @@ function Quizzes() {
   )
 }
 
-function QuizRunner({ quizKey, set, name }: { quizKey: QuizKey; set: QuizQuestion[]; name: string }) {
+function QuizRunner({
+  quizKey,
+  set,
+  name,
+  settings,
+  saved,
+}: {
+  quizKey: QuizKey
+  set: QuizQuestion[]
+  name: string
+  settings: QuizSettings
+  saved: QuizRun | null
+}) {
   const { progress, update } = useProgress()
-  const [i, setI] = useState(0)
-  const [picked, setPicked] = useState<number | null>(null)
-  const [score, setScore] = useState(0)
-  const [done, setDone] = useState(false)
+  const [run, setRun] = useState<QuizRun>(() => saved ?? newRun(set, settings))
+  const [done, setDone] = useState<{ score: number; total: number } | null>(null)
+  const [resumed] = useState(() => !!saved && (saved.i > 0 || saved.picked !== null))
 
-  const q = set[i]
-  const answered = picked !== null
+  const byId = new Map(set.map((q) => [q.id, q]))
+  const q = byId.get(run.order[run.i])!
+  const total = run.order.length
+  // Display order of choices; falls back to the original order if the admin changed the choices.
+  const stored = run.choiceOrders[q.id]
+  const order = stored && stored.length === q.choices.length ? stored : q.choices.map((_, k) => k)
+  const answered = run.picked !== null
 
-  function choose(idx: number) {
+  // Every step is saved, so leaving mid-quiz keeps the place and the score.
+  function save(next: QuizRun) {
+    setRun(next)
+    update((p) => ({ ...p, quizRuns: { ...p.quizRuns, [quizKey]: next } }))
+  }
+
+  function choose(original: number) {
     if (answered) return
-    setPicked(idx)
-    const right = idx === q.answer
-    if (right) setScore((s) => s + 1)
-    update((p) => ({ ...p, answered: { ...p.answered, [q.id]: p.answered[q.id] || right } }))
+    const right = original === q.answer
+    const next = { ...run, picked: original, score: run.score + (right ? 1 : 0) }
+    setRun(next)
+    update((p) => ({
+      ...p,
+      answered: { ...p.answered, [q.id]: p.answered[q.id] || right },
+      quizRuns: { ...p.quizRuns, [quizKey]: next },
+    }))
   }
 
   function next() {
-    if (i + 1 < set.length) {
-      setI(i + 1)
-      setPicked(null)
-      return
-    }
-    const pct = Math.round((score / set.length) * 100)
-    update((p) => ({
-      ...p,
-      quizBest: { ...p.quizBest, [quizKey]: Math.max(pct, p.quizBest[quizKey] ?? 0) },
-      quizAttempts: { ...p.quizAttempts, [quizKey]: (p.quizAttempts[quizKey] ?? 0) + 1 },
-    }))
-    setDone(true)
+    if (run.i + 1 < total) return save({ ...run, i: run.i + 1, picked: null })
+    const pct = Math.round((run.score / total) * 100)
+    update((p) => {
+      const quizRuns = { ...p.quizRuns }
+      delete quizRuns[quizKey]
+      return {
+        ...p,
+        quizRuns,
+        quizBest: { ...p.quizBest, [quizKey]: Math.max(pct, p.quizBest[quizKey] ?? 0) },
+        quizAttempts: { ...p.quizAttempts, [quizKey]: (p.quizAttempts[quizKey] ?? 0) + 1 },
+      }
+    })
+    setDone({ score: run.score, total })
   }
 
-  function retry() {
-    setI(0)
-    setPicked(null)
-    setScore(0)
-    setDone(false)
+  function startOver() {
+    setDone(null)
+    save(newRun(set, settings))
   }
 
   if (done) {
-    const pct = Math.round((score / set.length) * 100)
+    const pct = Math.round((done.score / done.total) * 100)
     const passed = pct >= PASS_MARK * 100
     return (
       <div className="mx-auto max-w-lg rounded-2xl border bg-card p-8 text-center">
         <Trophy className={cn('mx-auto size-12', passed ? 'text-highlight' : 'text-muted-foreground')} />
         <h1 className="mt-4 font-display text-3xl font-bold">{pct}%</h1>
         <p className="mt-1 text-muted-foreground">
-          {score} of {set.length} correct · {passed ? 'Passed!' : `${PASS_MARK * 100}% needed to pass`}
+          {done.score} of {done.total} correct · {passed ? 'Passed!' : `${PASS_MARK * 100}% needed to pass`}
         </p>
         <p className="mt-1 text-sm text-muted-foreground">Best score: {Math.max(pct, progress.quizBest[quizKey] ?? 0)}%</p>
         <div className="mt-6 flex justify-center gap-3">
-          <Button onClick={retry}>
+          <Button onClick={startOver}>
             <RotateCcw /> Retry
           </Button>
           <Button variant="outline" asChild>
@@ -146,27 +221,39 @@ function QuizRunner({ quizKey, set, name }: { quizKey: QuizKey; set: QuizQuestio
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="mb-6 flex items-center justify-between text-sm">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-2 text-sm">
         <Link to="/app/quizzes" className="text-muted-foreground hover:text-foreground">
           ← {name}
         </Link>
-        <span className="math text-muted-foreground">
-          {i + 1}/{set.length} · score {score}
+        <span className="flex items-center gap-3">
+          <span className="math text-muted-foreground">
+            {run.i + 1}/{total} · score {run.score}
+          </span>
+          {(run.i > 0 || answered) && (
+            <Button variant="ghost" size="sm" onClick={startOver}>
+              <RotateCcw /> Start over
+            </Button>
+          )}
         </span>
       </div>
-      <Progress value={(i / set.length) * 100} className="mb-8 h-1.5 bg-muted" />
+      {resumed && run.i === saved?.i && (
+        <p className="mb-4 rounded-lg bg-secondary px-3 py-2 text-sm" role="status">
+          Welcome back — you’re picking up at question {run.i + 1}.
+        </p>
+      )}
+      <Progress value={(run.i / total) * 100} className="mb-8 h-1.5 bg-muted" />
       <h1 className="math text-xl font-semibold">{q.prompt}</h1>
       <div className="mt-6 grid gap-3" role="radiogroup" aria-label="Answer choices">
-        {q.choices.map((c, idx) => {
-          const isRight = answered && idx === q.answer
-          const isWrong = answered && idx === picked && idx !== q.answer
+        {order.map((original) => {
+          const isRight = answered && original === q.answer
+          const isWrong = answered && original === run.picked && original !== q.answer
           return (
             <button
-              key={idx}
+              key={original}
               role="radio"
-              aria-checked={picked === idx}
+              aria-checked={run.picked === original}
               disabled={answered}
-              onClick={() => choose(idx)}
+              onClick={() => choose(original)}
               className={cn(
                 'math flex items-center justify-between rounded-xl border bg-card px-4 py-3 text-left transition-colors motion-reduce:transition-none',
                 !answered && 'hover:border-primary hover:bg-secondary',
@@ -174,7 +261,7 @@ function QuizRunner({ quizKey, set, name }: { quizKey: QuizKey; set: QuizQuestio
                 isWrong && 'border-destructive bg-destructive/10',
               )}
             >
-              {c}
+              {q.choices[original]}
               {isRight && <Check className="size-4 text-success" />}
               {isWrong && <X className="size-4 text-destructive" />}
             </button>
@@ -183,12 +270,12 @@ function QuizRunner({ quizKey, set, name }: { quizKey: QuizKey; set: QuizQuestio
       </div>
       {answered && (
         <div className="mt-6 rounded-xl bg-muted p-4" aria-live="polite">
-          <p className={cn('font-semibold', picked === q.answer ? 'text-success' : 'text-destructive')}>
-            {picked === q.answer ? 'Correct!' : 'Not quite.'}
+          <p className={cn('font-semibold', run.picked === q.answer ? 'text-success' : 'text-destructive')}>
+            {run.picked === q.answer ? 'Correct!' : 'Not quite.'}
           </p>
           <p className="mt-1 text-sm">{q.explanation}</p>
           <Button className="mt-4" onClick={next}>
-            {i + 1 < set.length ? 'Next question' : 'See results'}
+            {run.i + 1 < total ? 'Next question' : 'See results'}
           </Button>
         </div>
       )}

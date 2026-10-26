@@ -15,7 +15,8 @@ import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/signup')({
   beforeLoad: async () => {
-    if (await getViewer()) throw redirect({ to: '/app' })
+    const viewer = await getViewer()
+    if (viewer) throw redirect({ to: viewer.role === 'admin' ? '/app/admin' : '/app' })
   },
   head: () => ({ meta: [{ title: 'Create account · MathConnect' }] }),
   component: Signup,

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Check, Pencil, Plus } from 'lucide-react'
 
-import { ConfirmDelete, Field, PublishedSwitch, StringList, useContentAction } from '@/components/admin-editor'
+import { ConfirmDelete, Field, PublishedSwitch, Section, StringList, useContentAction } from '@/components/admin-editor'
 import { PageHeader } from '@/components/app-shell'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -11,8 +11,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import type { Content, QuizQuestion } from '@/lib/content'
-import { deleteQuestion, getAdminContent, saveQuestion } from '@/lib/content.functions'
+import { quizKeys, type Content, type QuizKey, type QuizQuestion } from '@/lib/content'
+import { deleteQuestion, getAdminContent, saveQuestion, saveQuizSettings } from '@/lib/content.functions'
 import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/app/admin/quizzes')({
@@ -122,6 +122,35 @@ function QuestionDialog({ content, draft, onClose }: { content: Content; draft: 
   )
 }
 
+// Per-quiz ordering. A run already in progress keeps its order until the student starts over.
+function QuizOrderSettings({ content }: { content: Content }) {
+  const { busy, run } = useContentAction()
+  const nameOf = (k: QuizKey) => (k === 'all' ? 'Mixed review' : (content.topics.find((t) => t.id === k)?.name ?? k))
+  return (
+    <Section title="Question order" description="Choose per quiz whether questions and answer choices appear in random order. Students who are partway through keep their current order until they start over.">
+      <div className="divide-y rounded-xl border bg-background">
+        {quizKeys.map((k) => {
+          const s = content.quizSettings[k]
+          const set = (patch: Partial<typeof s>) => run(() => saveQuizSettings({ data: { quiz: k, ...s, ...patch } }), `${nameOf(k)} updated`)
+          return (
+            <div key={k} className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
+              <p className="min-w-40 flex-1 font-medium">{nameOf(k)}</p>
+              <label className="flex items-center gap-2 text-sm">
+                <Switch checked={s.shuffleQuestions} disabled={busy} onCheckedChange={(c) => set({ shuffleQuestions: c })} aria-label={`Random question order for ${nameOf(k)}`} />
+                Random question order
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Switch checked={s.shuffleChoices} disabled={busy} onCheckedChange={(c) => set({ shuffleChoices: c })} aria-label={`Shuffle answer choices for ${nameOf(k)}`} />
+                Shuffle answer choices
+              </label>
+            </div>
+          )
+        })}
+      </div>
+    </Section>
+  )
+}
+
 function QuizzesAdmin() {
   const content = Route.useLoaderData()
   const [lessonFilter, setLessonFilter] = useState('all')
@@ -142,6 +171,10 @@ function QuizzesAdmin() {
           </Button>
         }
       />
+      <div className="mb-8">
+        <QuizOrderSettings content={content} />
+      </div>
+      <h2 className="mb-3 font-display text-lg font-bold">Questions</h2>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="w-full max-w-xs">
           <LessonSelect id="filter" content={content} value={lessonFilter} onChange={setLessonFilter} all />

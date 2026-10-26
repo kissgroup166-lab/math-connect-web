@@ -19,7 +19,8 @@ export const Route = createFileRoute('/login')({
     error: typeof s.error === 'string' ? s.error : undefined,
   }),
   beforeLoad: async () => {
-    if (await getViewer()) throw redirect({ to: '/app' })
+    const viewer = await getViewer()
+    if (viewer) throw redirect({ to: viewer.role === 'admin' ? '/app/admin' : '/app' })
   },
   head: () => ({ meta: [{ title: 'Log in · MathConnect' }] }),
   component: Login,
@@ -37,11 +38,16 @@ function Login() {
     setBusy(true)
     setError(null)
     try {
-      await signIn({ data: { email: String(form.get('email')), password: String(form.get('password')) } })
+      const { role } = await signIn({ data: { email: String(form.get('email')), password: String(form.get('password')) } })
+      // Drop data cached for the signed-out visitor. Not router.invalidate(): that reruns this
+      // page's beforeLoad, which would bounce the now signed-in user to /app first.
       forgetViewer()
-      await router.invalidate()
+      router.clearCache()
       toast.success('Welcome back!')
-      await router.navigate({ href: search.redirect ?? '/app' })
+      // The admin always starts on the overview unless the link pointed at another admin page.
+      const admin = role === 'admin'
+      const target = admin ? (search.redirect?.startsWith('/app/admin') ? search.redirect : '/app/admin') : (search.redirect ?? '/app')
+      await router.navigate({ href: target })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not log in.')
     } finally {

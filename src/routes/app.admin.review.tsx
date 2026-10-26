@@ -4,7 +4,7 @@ import { AlertTriangle, Check, ExternalLink, Eye, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/app-shell'
-import { ScoreMeter, StatusBadge } from '@/components/submission-bits'
+import { FileLink, ScoreMeter, StatusBadge } from '@/components/submission-bits'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
@@ -162,7 +162,7 @@ function SubmissionsPanel({ items }: { items: Submission[] }) {
             {shown.map((s) => (
               <TableRow key={s.id}>
                 <TableCell>
-                  <p className="font-medium">{s.title}</p>
+                  <FileLink s={s} className="font-medium" />
                   <p className="text-xs text-muted-foreground">
                     {s.ownerName} · {s.ownerRole}
                   </p>

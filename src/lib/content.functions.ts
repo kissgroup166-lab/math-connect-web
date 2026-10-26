@@ -128,6 +128,14 @@ export const deleteErrorItem = createServerFn({ method: 'POST' })
   .validator(z.object({ id: z.string().min(1) }))
   .handler(({ data }) => adminWrite((sb) => sb.from('error_items').delete().eq('id', data.id)))
 
+export const saveQuizSettings = createServerFn({ method: 'POST' })
+  .validator(z.object({ quiz: z.enum(['trig', 'exp', 'log', 'all']), shuffleQuestions: z.boolean(), shuffleChoices: z.boolean() }))
+  .handler(({ data }) =>
+    adminWrite((sb) =>
+      sb.from('quiz_settings').update({ shuffle_questions: data.shuffleQuestions, shuffle_choices: data.shuffleChoices }).eq('quiz', data.quiz),
+    ),
+  )
+
 // Quick show/hide from the editor lists.
 export const setPublished = createServerFn({ method: 'POST' })
   .validator(z.object({ table: z.enum(['lessons', 'questions', 'error_items']), id: z.string().min(1), published: z.boolean() }))

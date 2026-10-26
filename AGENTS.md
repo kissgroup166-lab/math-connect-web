@@ -2,7 +2,7 @@
 
 This document describes the project for developers and AI agents working on this codebase.
 
-> **Continue from [PLAN.md](PLAN.md).** Milestones 1–3 are complete (product surface, Supabase auth and roles, PDF upload pipeline), and so is Milestone 4's content management. Next is Milestone 4's progress tables.
+> **Continue from [PLAN.md](PLAN.md).** Milestones 1–3 are complete (product surface, Supabase auth and roles, PDF upload pipeline), and so is Milestone 4 (content management and account-saved progress). Next is Milestone 5.
 
 ## Project Overview
 
@@ -19,7 +19,7 @@ This document describes the project for developers and AI agents working on this
 - `supabase/migrations/`: the schema, triggers, RLS, and Storage policies. `scripts/create-admin.mjs` creates the single admin.
 - `/app` routes require a session (`beforeLoad` in `app.tsx`), and `/app/admin` requires the admin role.
 - `src/lib/relevance.ts`: a pure `scoreRelevance(text, lesson)` and its bands (80+ relevant and pending approval, 50–79 needs review, under 50 unrelated). Short or empty text is flagged for manual review. Scores never auto-publish anything.
-- `src/lib/progress.ts`: `useProgress()` saves quiz and game progress to localStorage. It will be swapped for Supabase tables.
+- `src/lib/progress.ts`: `useProgress()` is a shared store of the user's progress (quiz bests and attempts, answered questions, game bests, unfinished quiz runs), saved to `user_progress` through `progress.functions.ts`. Old browser-only progress is copied to the account once. Per-quiz random order and choice shuffling come from `quiz_settings` (admin → Quizzes).
 - `src/components/games/`: one file per game, registered in `index.ts`. Each game takes `{ onFinish(score), best }`.
 - `src/components/submission-bits.tsx`: the shared `StatusBadge`, `ScoreMeter`, and `SubmissionRow` components.
 

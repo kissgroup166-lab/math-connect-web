@@ -1,7 +1,7 @@
 // Server-only content loading. Published content is the same for every visitor, so it is
 // cached in memory briefly; admin writes clear the cache in this process.
 import type { getSupabase } from '@/lib/supabase.server'
-import type { Content, ErrorItem, Lesson, QuizQuestion, Topic, TopicId } from '@/lib/content'
+import { quizKeys, type Content, type ErrorItem, type Lesson, type QuizKey, type QuizQuestion, type QuizSettings, type Topic, type TopicId } from '@/lib/content'
 
 type Sb = ReturnType<typeof getSupabase>
 
@@ -23,18 +23,19 @@ export async function loadPublishedContent(sb: Sb): Promise<Content> {
 
 export async function loadContent(sb: Sb, publishedOnly: boolean): Promise<Content> {
   const only = <T extends { published: boolean }>(rows: T[]) => (publishedOnly ? rows.filter((r) => r.published) : rows)
-  const [t, l, q, e] = await Promise.all([
+  const [t, l, q, e, s] = await Promise.all([
     sb.from('topics').select('*').order('sort'),
     sb.from('lessons').select('*').order('sort').order('id'),
     sb.from('questions').select('*').order('sort').order('id'),
     sb.from('error_items').select('*').order('sort').order('id'),
+    sb.from('quiz_settings').select('*'),
   ])
-  const failed = t.error ?? l.error ?? q.error ?? e.error
+  const failed = t.error ?? l.error ?? q.error ?? e.error ?? s.error
   if (failed) {
     console.error('Loading content failed:', failed.message)
     throw new Error(
       failed.code === '42P01' || failed.code === 'PGRST205'
-        ? 'The content tables are missing. Run supabase/migrations/20261028000000_content.sql on the database.'
+        ? 'Some database tables are missing. Run the newest files in supabase/migrations on the database.'
         : 'Could not load the course content.',
     )
   }
@@ -75,5 +76,12 @@ export async function loadContent(sb: Sb, publishedOnly: boolean): Promise<Conte
   const errorItems: ErrorItem[] = only(
     (e.data ?? []).map((r) => ({ id: r.id, topic: r.topic_id, problem: r.problem, steps: r.steps, wrong: r.wrong, why: r.why, published: r.published })),
   )
-  return { topics, lessons, questions, errorItems }
+  // Quizzes keep their fixed order unless the admin turned shuffling on.
+  const quizSettings = Object.fromEntries(
+    quizKeys.map((k) => {
+      const r = (s.data ?? []).find((x) => x.quiz === k)
+      return [k, { shuffleQuestions: !!r?.shuffle_questions, shuffleChoices: !!r?.shuffle_choices }]
+    }),
+  ) as Record<QuizKey, QuizSettings>
+  return { topics, lessons, questions, errorItems, quizSettings }
 }
