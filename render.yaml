@@ -1,0 +1,22 @@
+# Render Blueprint: Dashboard → New → Blueprint → pick this repo.
+# Builds the Dockerfile (TARGET=node build served by server.mjs). Render sets PORT.
+services:
+  - type: web
+    name: math-connect-web
+    runtime: docker
+    plan: free
+    branch: main
+    autoDeploy: true
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      # Asked for when the Blueprint is created; copy them from your .env.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      # The public address, e.g. https://math-connect-web.onrender.com (used in email links).
+      - key: SITE_URL
+        sync: false
+      # The service-role key and ADMIN_* values stay on your computer; only
+      # `npm run admin:create` uses them.

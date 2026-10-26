@@ -12,7 +12,7 @@ A study platform for **trigonometric identities, exponential functions, and loga
 
 ## Tech
 
-TanStack Start (React 19), Vite, Tailwind CSS 4, shadcn/ui, Supabase (Auth, Postgres + RLS, Storage), unpdf. Deploys to Netlify or runs as a Docker container.
+TanStack Start (React 19), Vite, Tailwind CSS 4, shadcn/ui, Supabase (Auth, Postgres + RLS, Storage), unpdf. Deploys to Render or Netlify, or runs as a Docker container.
 
 ## Run locally
 
@@ -36,6 +36,16 @@ docker compose up -d --build
 ```
 
 The app runs at http://localhost:3000. The container reaches local Supabase through `host.docker.internal`. To point it at a hosted Supabase project instead, set `DOCKER_SUPABASE_URL` (or `SUPABASE_URL`) and the keys in `.env`.
+
+## Deploy to Render
+
+[render.yaml](render.yaml) is a Render Blueprint for the Docker image (free plan, health check at `/api/health`).
+
+1. In Render: **New → Blueprint**, pick this repo, and enter `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SITE_URL` (the `https://….onrender.com` address; set it after the first deploy if you don't know it yet).
+2. In Supabase: run the migrations (see below), and under **Authentication → URL Configuration** set the Site URL to the Render address and add `<SITE_URL>/**` to the redirect URLs.
+3. Run `npm run admin:create` once on your computer against that project.
+
+Pushes to `main` redeploy automatically. Free services sleep after 15 idle minutes, so the first visit after that takes about a minute.
 
 ## Deploy to Netlify
 
