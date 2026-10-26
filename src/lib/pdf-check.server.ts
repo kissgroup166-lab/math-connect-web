@@ -2,7 +2,7 @@
 // The result is never `approved`: only the admin can publish a file.
 import { extractText, getDocumentProxy } from 'unpdf'
 
-import type { Lesson } from '@/data/lessons'
+import type { Lesson } from '@/lib/content'
 import { countWords, MIN_WORDS, scoreRelevance, type RelevanceBand } from '@/lib/relevance'
 import type { SubmissionStatus } from '@/lib/submissions'
 

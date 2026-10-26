@@ -1,7 +1,8 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
-import { getLesson } from '@/data/lessons'
+import { getLesson } from '@/lib/content'
+import { loadPublishedContent } from '@/lib/content.server'
 import { checkPdf, isPdf } from '@/lib/pdf-check.server'
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB, type Submission } from '@/lib/submissions'
 import { getSupabase, requireAdmin, requireViewer } from '@/lib/supabase.server'
@@ -78,13 +79,15 @@ export const uploadSubmission = createServerFn({ method: 'POST' })
     if (!(file instanceof File)) throw new Error('Choose a PDF to upload.')
     if (file.size === 0) throw new Error('This file is empty.')
     if (file.size > MAX_UPLOAD_BYTES) throw new Error(`The limit is ${MAX_UPLOAD_MB} MB.`)
-    const lesson = getLesson(lessonId)
-    if (!lesson) throw new Error('Choose the lesson this PDF covers.')
-    return { file, lesson, title: (title || file.name).slice(0, 200) }
+    if (!lessonId) throw new Error('Choose the lesson this PDF covers.')
+    return { file, lessonId, title: (title || file.name).slice(0, 200) }
   })
-  .handler(async ({ data: { file, lesson, title } }) => {
+  .handler(async ({ data: { file, lessonId, title } }) => {
     const sb = getSupabase()
     const viewer = await requireViewer(sb)
+    // Score against the lesson as the admin last edited it (keywords and formulas).
+    const lesson = getLesson(await loadPublishedContent(sb), lessonId)
+    if (!lesson) throw new Error('Choose the lesson this PDF covers.')
     const bytes = new Uint8Array(await file.arrayBuffer())
     if (!isPdf(bytes)) throw new Error('Only PDF files can be uploaded.')
 

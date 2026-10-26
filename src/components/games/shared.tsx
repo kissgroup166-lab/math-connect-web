@@ -1,7 +1,7 @@
 import { RotateCcw, Trophy } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { lessons } from '@/data/lessons'
+import type { Lesson } from '@/lib/content'
 
 export interface GameProps {
   onFinish: (score: number) => void
@@ -18,9 +18,22 @@ export function shuffle<T>(arr: T[]): T[] {
 }
 
 // Every named formula in the lesson catalog, used by Match and Memory.
-export const formulaPairs = lessons.flatMap((l) =>
-  l.formulas.map((f, i) => ({ id: `${l.id}-${i}`, label: `${l.title.split(' ')[0]} · ${f.label}`, expr: f.expr })),
-)
+export function formulaPairsOf(lessons: Lesson[]) {
+  return lessons.flatMap((l) =>
+    l.formulas.map((f, i) => ({ id: `${l.id}-${i}`, label: `${l.title.split(' ')[0]} · ${f.label}`, expr: f.expr })),
+  )
+}
+
+export type FormulaPair = ReturnType<typeof formulaPairsOf>[number]
+
+// Shown when the admin has hidden or removed too much content for a full round.
+export function NotEnoughContent({ what }: { what: string }) {
+  return (
+    <div className="mx-auto max-w-md rounded-2xl border bg-card p-8 text-center text-muted-foreground" role="status">
+      There aren’t enough {what} to play this game right now. Check back soon.
+    </div>
+  )
+}
 
 export function GameOver({ title, detail, best, onRetry }: { title: string; detail: string; best?: number; onRetry: () => void }) {
   return (

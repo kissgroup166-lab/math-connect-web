@@ -35,14 +35,15 @@ export function getSupabaseForRequest(request: Request, headers: Headers) {
 }
 
 export async function loadViewer(sb: ReturnType<typeof getSupabase>): Promise<Viewer | null> {
-  const {
-    data: { user },
-  } = await sb.auth.getUser()
-  if (!user) return null
-  const { data } = await sb.from('profiles').select('full_name, email, role, teacher_verified').eq('id', user.id).single()
+  // getClaims verifies the session JWT against the project's cached signing keys, so it
+  // skips the Auth round trip getUser makes. The profile query below still runs under RLS.
+  const { data: auth } = await sb.auth.getClaims()
+  const userId = auth?.claims.sub
+  if (!userId) return null
+  const { data } = await sb.from('profiles').select('full_name, email, role, teacher_verified').eq('id', userId).single()
   if (!data) return null
   return {
-    id: user.id,
+    id: userId,
     name: data.full_name || data.email.split('@')[0],
     email: data.email,
     role: data.role,

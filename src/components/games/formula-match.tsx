@@ -1,13 +1,21 @@
 import { useMemo, useState } from 'react'
 
 import { cn } from '@/lib/utils'
-import { formulaPairs, GameOver, shuffle, type GameProps } from './shared'
+import { useContent } from '@/lib/content'
+import { formulaPairsOf, GameOver, NotEnoughContent, shuffle, type FormulaPair, type GameProps } from './shared'
 
 const ROUND = 6
 
-export function FormulaMatch({ onFinish, best }: GameProps) {
+export function FormulaMatch(props: GameProps) {
+  const { lessons } = useContent()
+  const pool = useMemo(() => formulaPairsOf(lessons), [lessons])
+  if (pool.length < ROUND) return <NotEnoughContent what="formulas" />
+  return <Match {...props} pool={pool} />
+}
+
+function Match({ onFinish, best, pool }: GameProps & { pool: FormulaPair[] }) {
   const [seed, setSeed] = useState(0)
-  const pairs = useMemo(() => shuffle(formulaPairs).slice(0, ROUND), [seed])
+  const pairs = useMemo(() => shuffle(pool).slice(0, ROUND), [seed, pool])
   const right = useMemo(() => shuffle(pairs), [pairs])
   const [selected, setSelected] = useState<string | null>(null)
   const [matched, setMatched] = useState<string[]>([])

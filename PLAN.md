@@ -8,7 +8,7 @@ The work is split into milestones. Each one can ship on its own.
 
 - Landing page, plus Login, Signup (Student or Teacher, never Admin), and Forgot Password screens.
 - Dashboard shell with Home, Learn, Quizzes, Games, My Materials, Shared Materials, Profile, and Admin. Includes topic search and a mobile menu.
-- **Real content:** 9 lessons (3 per topic) with formulas, explanations, step-by-step worked examples, and auto-checked practice (`src/data/lessons.ts`).
+- **Real content:** 9 lessons (3 per topic) with formulas, explanations, step-by-step worked examples, and auto-checked practice (now in Supabase; see Milestone 4).
 - **Playable now:** 30 quiz questions with explanations, scoring, retries, and saved best scores, plus all five games (Formula Match, Equation Puzzle, Math Challenge, Find the Error, Formula Memory). Progress is saved in the browser for now (`src/lib/progress.ts`).
 - My Materials upload card: dashed drop zone, folder icon, empty state, PDF-only and size checks, a required lesson, and a status tracker.
 - Admin: review queue (pending, approved, rejected), a preview dialog, approve/reject with feedback, user role and teacher-permission management, and a content overview.
@@ -39,7 +39,7 @@ Files are served through `/api/files/$id` (an RLS check, then a stream from Stor
 ## Milestone 4: Progress and content management
 
 - Add `quiz_attempts`, `game_scores`, and `lesson_progress` tables with owner-only RLS. Replace `useProgress` browser storage and the fixture progress.
-- Let admins (and verified teachers, where allowed) edit lessons, quiz questions, and game content from the Admin tab, backed by `lessons`/`questions` tables seeded from the current data files.
+- ✅ Admin-only content management: `topics`, `lessons`, `questions`, and `error_items` tables (seeded from the old data files), editors under Admin → Topics & lessons, Quizzes, and Games, and a show/hide switch on each item. The admin has its own menu. Teachers can't edit content (owner's decision).
 
 ## Milestone 5: Hardening and QA
 

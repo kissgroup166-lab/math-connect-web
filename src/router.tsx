@@ -10,7 +10,9 @@ export const getRouter = () => {
     routeTree,
     defaultErrorComponent: RouteErrorPage,
     scrollRestoration: true,
-    defaultPreloadStaleTime: 0,
+    // Start loading a page when its link is hovered or focused, and reuse that result on click.
+    defaultPreload: 'intent',
+    defaultPreloadStaleTime: 30_000,
   })
 
   return router

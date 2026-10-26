@@ -5,8 +5,7 @@ import { Check, RotateCcw, Trophy, X } from 'lucide-react'
 import { PageHeader } from '@/components/app-shell'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { topics, type TopicId } from '@/data/lessons'
-import { PASS_MARK, questions } from '@/data/quizzes'
+import { PASS_MARK, useContent, type QuizQuestion, type TopicId } from '@/lib/content'
 import { useProgress } from '@/lib/progress'
 import { cn } from '@/lib/utils'
 
@@ -19,23 +18,36 @@ export const Route = createFileRoute('/app/quizzes')({
   component: Quizzes,
 })
 
-const quizzes: { key: QuizKey; name: string }[] = [
-  ...topics.map((t) => ({ key: t.id as QuizKey, name: t.name })),
-  { key: 'all', name: 'Mixed review — all 30' },
-]
-
 function Quizzes() {
   const { topic } = Route.useSearch()
   const { progress } = useProgress()
+  const { topics, questions } = useContent()
+  const quizzes: { key: QuizKey; name: string }[] = [
+    ...topics.map((t) => ({ key: t.id as QuizKey, name: t.name })),
+    { key: 'all', name: `Mixed review — all ${questions.length}` },
+  ]
+  const setFor = (key: QuizKey) => (key === 'all' ? questions : questions.filter((q) => q.topic === key))
 
-  if (topic) return <QuizRunner key={topic} quizKey={topic} />
+  if (topic) {
+    const set = setFor(topic)
+    if (set.length === 0)
+      return (
+        <div className="mx-auto max-w-md rounded-2xl border bg-card p-8 text-center" role="status">
+          <p className="text-muted-foreground">This quiz has no questions yet.</p>
+          <Button asChild variant="outline" className="mt-4">
+            <Link to="/app/quizzes">All quizzes</Link>
+          </Button>
+        </div>
+      )
+    return <QuizRunner key={topic} quizKey={topic} set={set} name={quizzes.find((q) => q.key === topic)!.name} />
+  }
 
   return (
     <>
       <PageHeader title="Quizzes" description="Instant feedback with explanations. Retry as often as you like and your best score is saved." />
       <div className="grid gap-4 md:grid-cols-2">
         {quizzes.map((q) => {
-          const count = q.key === 'all' ? questions.length : questions.filter((x) => x.topic === q.key).length
+          const count = setFor(q.key).length
           const best = progress.quizBest[q.key]
           return (
             <div key={q.key} className="flex flex-col rounded-2xl border bg-card p-6">
@@ -52,11 +64,15 @@ function Quizzes() {
                   </span>
                 )}
               </div>
-              <Button asChild className="mt-6 self-start">
-                <Link to="/app/quizzes" search={{ topic: q.key }}>
-                  {best !== undefined ? 'Retry quiz' : 'Start quiz'}
-                </Link>
-              </Button>
+              {count > 0 ? (
+                <Button asChild className="mt-6 self-start">
+                  <Link to="/app/quizzes" search={{ topic: q.key }}>
+                    {best !== undefined ? 'Retry quiz' : 'Start quiz'}
+                  </Link>
+                </Button>
+              ) : (
+                <p className="mt-6 text-sm text-muted-foreground">No questions yet.</p>
+              )}
             </div>
           )
         })}
@@ -65,9 +81,7 @@ function Quizzes() {
   )
 }
 
-function QuizRunner({ quizKey }: { quizKey: QuizKey }) {
-  const set = quizKey === 'all' ? questions : questions.filter((q) => q.topic === quizKey)
-  const name = quizzes.find((q) => q.key === quizKey)!.name
+function QuizRunner({ quizKey, set, name }: { quizKey: QuizKey; set: QuizQuestion[]; name: string }) {
   const { progress, update } = useProgress()
   const [i, setI] = useState(0)
   const [picked, setPicked] = useState<number | null>(null)

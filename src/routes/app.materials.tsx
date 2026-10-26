@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { lessons, topics } from '@/data/lessons'
+import { useContent } from '@/lib/content'
 import { fileUrl, inReview, MAX_UPLOAD_BYTES, MAX_UPLOAD_MB, type Submission } from '@/lib/submissions'
 import { listMySubmissions, uploadSubmission } from '@/lib/submissions.functions'
 import { cn } from '@/lib/utils'
@@ -37,6 +37,7 @@ function validate(file: File): string | null {
 }
 
 function UploadCard({ onUploaded }: { onUploaded: () => Promise<void> }) {
+  const { lessons, topics } = useContent()
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)

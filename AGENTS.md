@@ -2,7 +2,7 @@
 
 This document describes the project for developers and AI agents working on this codebase.
 
-> **Continue from [PLAN.md](PLAN.md).** Milestones 1–3 are complete (product surface, Supabase auth and roles, PDF upload pipeline). Next is Milestone 4: progress tables and content management.
+> **Continue from [PLAN.md](PLAN.md).** Milestones 1–3 are complete (product surface, Supabase auth and roles, PDF upload pipeline), and so is Milestone 4's content management. Next is Milestone 4's progress tables.
 
 ## Project Overview
 
@@ -11,9 +11,8 @@ This document describes the project for developers and AI agents working on this
 ### MathConnect architecture
 
 - `src/routes/index.tsx`: the landing page. `login.tsx`, `signup.tsx`, `forgot-password.tsx`, and `reset-password.tsx` are the auth screens. `auth.callback.ts` exchanges email-link codes for a session. `api.files.$id.ts` streams PDFs after an RLS check.
-- `src/routes/app.tsx`: the dashboard layout (`AppShell` in `src/components/app-shell.tsx`, with the sidebar and topic search). Child routes: `app.index` (Home), `app.learn.index`, `app.learn.$lessonId`, `app.quizzes` (`?topic=` starts a quiz), `app.games.index`, `app.games.$gameId`, `app.materials`, `app.shared`, `app.profile`, and `app.admin`.
-- `src/data/lessons.ts`: the **real** content for 9 lessons, with formulas, explanations, examples, practice, and the `keywords` used for relevance scoring.
-- `src/data/quizzes.ts`: the **real** bank of 30 questions.
+- `src/routes/app.tsx`: the dashboard layout (`AppShell` in `src/components/app-shell.tsx`, with the sidebar and topic search). Child routes: `app.index` (Home), `app.learn.index`, `app.learn.$lessonId`, `app.quizzes` (`?topic=` starts a quiz), `app.games.index`, `app.games.$gameId`, `app.materials`, `app.shared`, `app.profile`, and the admin pages under `app.admin` (overview, `review`, `users`, `lessons` with `lessons.$lessonId` editor, `quizzes`, `games`). The admin gets its own sidebar menu, and `/app` redirects the admin to `/app/admin`.
+- Course content (topics, lessons, quiz questions, Find the Error items) lives in Supabase tables (`supabase/migrations/20261028000000_content.sql`, which also seeds the original 9 lessons and 30 questions). Only the admin writes it, from the admin pages. `src/lib/content.ts` has the types and `useContent()`; the root route loads published content (`currentContent`, cached for 5 minutes in the browser and 60 seconds on the server). `content.functions.ts` has the admin save/delete functions; call `forgetContent()` and `router.invalidate()` after a write (`useContentAction` in `admin-editor.tsx` does this).
 - `src/lib/supabase.server.ts`: the server-only Supabase client (cookie session) and `requireViewer`/`requireAdmin`. The browser never talks to Supabase directly.
 - `src/lib/*.functions.ts`: server functions for auth, submissions (including the upload pipeline), and users. `pdf-check.server.ts` extracts text with unpdf and picks the queue status. It never returns `approved`.
 - `src/lib/submissions.ts`: shared submission and user types and the status copy.

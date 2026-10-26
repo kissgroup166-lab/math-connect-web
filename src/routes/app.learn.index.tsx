@@ -3,7 +3,7 @@ import { CheckCircle2, Clock } from 'lucide-react'
 
 import { PageHeader } from '@/components/app-shell'
 import { Progress } from '@/components/ui/progress'
-import { lessons, topics } from '@/data/lessons'
+import { useContent } from '@/lib/content'
 import { lessonPct, useProgress } from '@/lib/progress'
 
 export const Route = createFileRoute('/app/learn/')({
@@ -13,9 +13,13 @@ export const Route = createFileRoute('/app/learn/')({
 
 function Learn() {
   const { progress } = useProgress()
+  const { lessons, topics, questions } = useContent()
   return (
     <>
-      <PageHeader title="Learn" description="Nine lessons across three topics. Each one has formulas, an explanation, worked examples, and practice." />
+      <PageHeader
+        title="Learn"
+        description={`${lessons.length} lessons across three topics. Each one has formulas, an explanation, worked examples, and practice.`}
+      />
       <div className="space-y-10">
         {topics.map((t) => (
           <section key={t.id} aria-labelledby={`topic-${t.id}`}>
@@ -27,7 +31,7 @@ function Learn() {
               {lessons
                 .filter((l) => l.topic === t.id)
                 .map((l) => {
-                  const pct = lessonPct(progress, l.id)
+                  const pct = lessonPct(progress, questions, l.id)
                   return (
                     <Link
                       key={l.id}

@@ -96,6 +96,7 @@ code {
 }
 
 @theme inline {
+  --animate-nav-progress: nav-progress 1s ease-in-out infinite;
   --font-sans: var(--font-body);
   --font-display: var(--font-heading);
   --color-success: var(--success);
@@ -190,5 +191,14 @@ code {
   .math {
     font-family: var(--font-math);
     font-feature-settings: 'calt' 0;
+  }
+}
+
+@keyframes nav-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
   }
 }

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getViewer, signIn } from '@/lib/auth.functions'
+import { forgetViewer } from '@/lib/viewer'
 
 // Only same-site paths, so a crafted link can't send users elsewhere after login.
 const safePath = (p: unknown) => (typeof p === 'string' && p.startsWith('/') && !p.startsWith('//') ? p : undefined)
@@ -37,6 +38,7 @@ function Login() {
     setError(null)
     try {
       await signIn({ data: { email: String(form.get('email')), password: String(form.get('password')) } })
+      forgetViewer()
       await router.invalidate()
       toast.success('Welcome back!')
       await router.navigate({ href: search.redirect ?? '/app' })

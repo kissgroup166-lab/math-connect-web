@@ -12,6 +12,8 @@ const config = defineConfig(({ mode }) => {
   Object.assign(process.env, { ...loadEnv(mode, process.cwd(), ''), ...process.env })
   return {
     resolve: { tsconfigPaths: true },
+    // File events don't cross a Windows bind mount into Docker, so the dev container polls (WATCH_POLL=1).
+    server: process.env.WATCH_POLL ? { watch: { usePolling: true, interval: 300 } } : undefined,
     // No edge functions here; their Deno-based dev emulation also crashes on some machines.
     plugins: [tailwindcss(), ...(forNode ? [] : [netlify({ dev: { edgeFunctions: { enabled: false } } })]), tanstackStart(), viteReact()],
   }

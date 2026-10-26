@@ -4,14 +4,14 @@ import { ArrowLeft, Check, FileText, Lightbulb, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { getLesson, getTopic, lessons, type PracticeItem, type WorkedExample } from '@/data/lessons'
+import { getLesson, useContent, type PracticeItem, type WorkedExample } from '@/lib/content'
 import { fileUrl } from '@/lib/submissions'
 import { listApproved } from '@/lib/submissions.functions'
 import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/app/learn/$lessonId')({
-  loader: async ({ params }) => {
-    const lesson = getLesson(params.lessonId)
+  loader: async ({ params, context }) => {
+    const lesson = getLesson(context.content, params.lessonId)
     if (!lesson) throw notFound()
     return { lesson, materials: await listApproved({ data: { lessonId: lesson.id } }) }
   },
@@ -94,6 +94,7 @@ function Practice({ item, n }: { item: PracticeItem; n: number }) {
 
 function LessonPage() {
   const { lesson, materials } = Route.useLoaderData()
+  const { lessons, getTopic } = useContent()
   const topic = getTopic(lesson.topic)
   const idx = lessons.findIndex((l) => l.id === lesson.id)
   const next = lessons[idx + 1]

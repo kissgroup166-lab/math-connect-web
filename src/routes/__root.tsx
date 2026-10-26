@@ -1,8 +1,10 @@
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
+import { useEffect } from 'react'
+import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router'
 
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { NotFoundPage } from '@/components/error-pages'
+import { currentContent, rememberContent } from '@/lib/content'
 
 import '../styles.css'
 
@@ -11,6 +13,8 @@ const siteDescription =
   'Learn trigonometric identities, exponential and logarithmic functions — with lessons, quizzes, games, and reviewed study materials.'
 
 export const Route = createRootRoute({
+  // Course content for every page (useContent). Cached on the server and in the browser.
+  beforeLoad: async () => ({ content: await currentContent() }),
   head: () => ({
     meta: [
       {
@@ -58,8 +62,16 @@ export const Route = createRootRoute({
     ],
   }),
   shellComponent: RootDocument,
+  component: Root,
   notFoundComponent: NotFoundPage,
 })
+
+function Root() {
+  const { content } = Route.useRouteContext()
+  // Seed the browser cache from the server render so the first navigation skips a fetch.
+  useEffect(() => rememberContent(content), [content])
+  return <Outlet />
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (

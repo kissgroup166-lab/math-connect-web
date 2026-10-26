@@ -1,23 +1,31 @@
 import { useMemo, useState } from 'react'
 
 import { cn } from '@/lib/utils'
-import { formulaPairs, GameOver, shuffle, type GameProps } from './shared'
+import { useContent } from '@/lib/content'
+import { formulaPairsOf, GameOver, NotEnoughContent, shuffle, type FormulaPair, type GameProps } from './shared'
 
 const PAIRS = 6
 
-export function FormulaMemory({ onFinish, best }: GameProps) {
+export function FormulaMemory(props: GameProps) {
+  const { lessons } = useContent()
+  const pool = useMemo(() => formulaPairsOf(lessons), [lessons])
+  if (pool.length < PAIRS) return <NotEnoughContent what="formulas" />
+  return <Memory {...props} pool={pool} />
+}
+
+function Memory({ onFinish, best, pool }: GameProps & { pool: FormulaPair[] }) {
   const [seed, setSeed] = useState(0)
   const cards = useMemo(
     () =>
       shuffle(
-        shuffle(formulaPairs)
+        shuffle(pool)
           .slice(0, PAIRS)
           .flatMap((p) => [
             { key: `${p.id}-n`, pair: p.id, text: p.label, math: false },
             { key: `${p.id}-f`, pair: p.id, text: p.expr, math: true },
           ]),
       ),
-    [seed],
+    [seed, pool],
   )
   const [open, setOpen] = useState<number[]>([])
   const [found, setFound] = useState<string[]>([])

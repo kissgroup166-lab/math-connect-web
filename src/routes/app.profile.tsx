@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { updateProfile } from '@/lib/auth.functions'
+import { forgetViewer } from '@/lib/viewer'
 import { useProgress } from '@/lib/progress'
 import { listMySubmissions } from '@/lib/submissions.functions'
 
@@ -60,6 +61,7 @@ function Profile() {
               setSaving(true)
               try {
                 await updateProfile({ data: { name } })
+                forgetViewer()
                 await router.invalidate()
                 toast.success('Profile saved')
               } catch (err) {

@@ -1,12 +1,29 @@
 import { useState } from 'react'
-import { Link, useNavigate, useRouter } from '@tanstack/react-router'
-import { BookOpen, FolderOpen, Gamepad2, Home, LogOut, Menu, Search, ShieldCheck, Share2, Sigma, Trophy, UserRound } from 'lucide-react'
+import { Link, useNavigate, useRouter, useRouterState } from '@tanstack/react-router'
+import {
+  BookOpen,
+  ClipboardCheck,
+  ExternalLink,
+  FolderOpen,
+  Gamepad2,
+  Home,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Search,
+  Share2,
+  Sigma,
+  Trophy,
+  UserRound,
+  Users,
+} from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { getTopic, lessons } from '@/data/lessons'
 import { signOut } from '@/lib/auth.functions'
+import { useContent } from '@/lib/content'
+import { forgetViewer } from '@/lib/viewer'
 import type { Viewer } from '@/lib/submissions'
 import { cn } from '@/lib/utils'
 
@@ -20,6 +37,31 @@ const nav = [
   { to: '/app/profile', label: 'Profile', icon: UserRound },
 ] as const
 
+// The admin manages the site rather than studying, so it gets its own menu.
+const adminNav = [
+  {
+    items: [
+      { to: '/app/admin', label: 'Overview', icon: LayoutDashboard, exact: true },
+      { to: '/app/admin/review', label: 'Review uploads', icon: ClipboardCheck },
+      { to: '/app/admin/users', label: 'Users', icon: Users },
+    ],
+  },
+  {
+    heading: 'Content',
+    items: [
+      { to: '/app/admin/lessons', label: 'Topics & lessons', icon: BookOpen },
+      { to: '/app/admin/quizzes', label: 'Quizzes', icon: Trophy },
+      { to: '/app/admin/games', label: 'Games', icon: Gamepad2 },
+    ],
+  },
+  {
+    items: [
+      { to: '/app/shared', label: 'Shared Materials', icon: Share2 },
+      { to: '/app/profile', label: 'Profile', icon: UserRound },
+    ],
+  },
+] as const
+
 export function Logo({ className }: { className?: string }) {
   return (
     <span className={cn('flex items-center gap-2 font-display text-lg font-bold tracking-tight', className)}>
@@ -31,10 +73,40 @@ export function Logo({ className }: { className?: string }) {
   )
 }
 
-function NavLinks({ onNavigate, isAdmin }: { onNavigate?: () => void; isAdmin: boolean }) {
-  const linkClass =
-    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground motion-reduce:transition-none'
-  const activeClass = 'bg-sidebar-accent text-sidebar-accent-foreground [&>svg]:text-sidebar-primary'
+const linkClass =
+  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground motion-reduce:transition-none'
+const activeClass = 'bg-sidebar-accent text-sidebar-accent-foreground [&>svg]:text-sidebar-primary'
+
+function AdminNavLinks({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <nav className="flex flex-col gap-1" aria-label="Admin">
+      {adminNav.map((group, g) => (
+        <div key={g} className={cn('flex flex-col gap-1', g > 0 && 'mt-3 border-t border-sidebar-border pt-3')}>
+          {'heading' in group && <p className="px-3 pb-1 text-xs font-semibold tracking-wide text-sidebar-foreground/60 uppercase">{group.heading}</p>}
+          {group.items.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              onClick={onNavigate}
+              activeOptions={{ exact: 'exact' in item }}
+              className={linkClass}
+              activeProps={{ className: activeClass }}
+            >
+              <item.icon className="size-4" />
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      ))}
+      <Link to="/app/learn" onClick={onNavigate} className={cn(linkClass, 'mt-3 text-xs')}>
+        <ExternalLink className="size-3.5" />
+        View as student
+      </Link>
+    </nav>
+  )
+}
+
+function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="flex flex-col gap-1" aria-label="Dashboard">
       {nav.map((item) => (
@@ -50,15 +122,6 @@ function NavLinks({ onNavigate, isAdmin }: { onNavigate?: () => void; isAdmin: b
           {item.label}
         </Link>
       ))}
-      {isAdmin && (
-        <>
-          <div className="my-3 border-t border-sidebar-border" />
-          <Link to="/app/admin" onClick={onNavigate} className={linkClass} activeProps={{ className: activeClass }}>
-            <ShieldCheck className="size-4" />
-            Admin
-          </Link>
-        </>
-      )}
     </nav>
   )
 }
@@ -68,6 +131,7 @@ function SidebarBody({ viewer, onNavigate }: { viewer: Viewer; onNavigate?: () =
   async function logOut() {
     onNavigate?.()
     await signOut()
+    forgetViewer()
     await router.invalidate()
     await router.navigate({ to: '/login' })
   }
@@ -76,7 +140,7 @@ function SidebarBody({ viewer, onNavigate }: { viewer: Viewer; onNavigate?: () =
       <Link to="/" className="px-2 pt-2 text-sidebar-foreground" onClick={onNavigate}>
         <Logo />
       </Link>
-      <NavLinks onNavigate={onNavigate} isAdmin={viewer.role === 'admin'} />
+      {viewer.role === 'admin' ? <AdminNavLinks onNavigate={onNavigate} /> : <NavLinks onNavigate={onNavigate} />}
       <div className="mt-auto rounded-xl bg-sidebar-accent p-3 text-sm">
         <p className="font-semibold text-sidebar-accent-foreground">{viewer.name}</p>
         <p className="text-xs capitalize text-sidebar-foreground/70">{viewer.role}</p>
@@ -96,6 +160,7 @@ function TopicSearch() {
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const { lessons, getTopic } = useContent()
   const term = q.trim().toLowerCase()
   const results = term
     ? lessons
@@ -160,10 +225,23 @@ function TopicSearch() {
   )
 }
 
+// Thin bar across the top while the next page's data loads, so a click never looks ignored.
+function NavProgress() {
+  const pending = useRouterState({ select: (s) => s.status === 'pending' })
+  if (!pending) return null
+  return (
+    <div className="fixed inset-x-0 top-0 z-50 h-0.5 overflow-hidden bg-primary/20" role="status">
+      <div className="h-full w-1/3 animate-nav-progress bg-primary motion-reduce:w-full motion-reduce:animate-none" />
+      <span className="sr-only">Loading page…</span>
+    </div>
+  )
+}
+
 export function AppShell({ viewer, children }: { viewer: Viewer; children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[16rem_1fr]">
+      <NavProgress />
       <aside className="sticky top-0 hidden h-screen bg-sidebar lg:block">
         <SidebarBody viewer={viewer} />
       </aside>

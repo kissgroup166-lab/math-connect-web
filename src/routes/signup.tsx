@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getViewer, signUp } from '@/lib/auth.functions'
 import { isStrongPassword } from '@/lib/password'
+import { forgetViewer } from '@/lib/viewer'
 import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/signup')({
@@ -50,6 +51,7 @@ function Signup() {
         setConfirmEmail(email)
         return
       }
+      forgetViewer()
       await router.invalidate()
       toast.success('Account created')
       await router.navigate({ to: '/app' })

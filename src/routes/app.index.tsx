@@ -1,18 +1,21 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { ArrowRight, BookOpen, FolderOpen, Gamepad2, Trophy } from 'lucide-react'
 
 import { PageHeader } from '@/components/app-shell'
 import { SubmissionRow } from '@/components/submission-bits'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { lessons, topics } from '@/data/lessons'
-import { questions } from '@/data/quizzes'
+import { useContent } from '@/lib/content'
 import { lessonPct, useProgress } from '@/lib/progress'
 import { inReview } from '@/lib/submissions'
 import { listMySubmissions } from '@/lib/submissions.functions'
 
 export const Route = createFileRoute('/app/')({
   head: () => ({ meta: [{ title: 'Home · MathConnect' }] }),
+  // The admin's home is the admin overview.
+  beforeLoad: ({ context }) => {
+    if (context.viewer.role === 'admin') throw redirect({ to: '/app/admin' })
+  },
   loader: () => listMySubmissions(),
   component: Home,
 })
@@ -35,7 +38,8 @@ function Home() {
   const { viewer } = Route.useRouteContext()
   const mySubmissions = Route.useLoaderData()
   const { progress } = useProgress()
-  const pctFor = (id: string) => lessonPct(progress, id)
+  const { lessons, topics, questions } = useContent()
+  const pctFor = (id: string) => lessonPct(progress, questions, id)
   const done = lessons.filter((l) => pctFor(l.id) === 100).length
   const correct = Object.values(progress.answered).filter(Boolean).length
   const pendingUploads = mySubmissions.filter(inReview).length

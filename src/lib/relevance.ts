@@ -1,6 +1,6 @@
 // Relevance scoring for uploaded PDFs. Pure function over extracted text so it
 // can run unchanged on the server once PDF extraction is wired up.
-import type { Lesson } from '@/data/lessons'
+import type { Lesson } from '@/lib/content'
 
 export type RelevanceBand = 'relevant' | 'review' | 'unrelated'
 

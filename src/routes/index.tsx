@@ -10,7 +10,7 @@ import {
 
 import { Logo } from '@/components/app-shell'
 import { Button } from '@/components/ui/button'
-import { lessons, topics } from '@/data/lessons'
+import { useContent } from '@/lib/content'
 
 export const Route = createFileRoute('/')({
   component: Landing,
@@ -24,7 +24,7 @@ const features = [
   },
   {
     icon: Trophy,
-    title: '30 quiz questions with explanations',
+    title: 'Quiz questions with explanations',
     body: 'Instant feedback, retries, and saved best scores for each topic.',
   },
   {
@@ -79,6 +79,7 @@ const floatingEquations = [
 ]
 
 function Landing() {
+  const { lessons, topics } = useContent()
   return (
     <div className="min-h-screen bg-background">
       <header className="mx-auto flex max-w-content items-center justify-between px-4 py-5 sm:px-6">

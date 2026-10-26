@@ -4,7 +4,7 @@ import { Download, FileText, FolderOpen } from 'lucide-react'
 import { PageHeader } from '@/components/app-shell'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { lessons, topics, type TopicId } from '@/data/lessons'
+import { useContent, type TopicId } from '@/lib/content'
 import { fileUrl } from '@/lib/submissions'
 import { listApproved } from '@/lib/submissions.functions'
 
@@ -21,6 +21,7 @@ function Shared() {
   const topic = Route.useSearch().topic ?? 'all'
   const navigate = Route.useNavigate()
   const setTopic = (t: TopicId | 'all') => navigate({ search: t === 'all' ? {} : { topic: t }, replace: true })
+  const { lessons, topics } = useContent()
   const visible = lessons.filter((l) => topic === 'all' || l.topic === topic)
 
   return (

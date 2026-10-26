@@ -1,19 +1,26 @@
 import { useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { lessons } from '@/data/lessons'
+import { useContent, type Lesson } from '@/lib/content'
 import { cn } from '@/lib/utils'
-import { GameOver, shuffle, type GameProps } from './shared'
+import { GameOver, NotEnoughContent, shuffle, type GameProps } from './shared'
 
 // Worked examples with at least three steps become puzzles: put the steps in order.
-const puzzles = lessons.flatMap((l) =>
-  l.examples.filter((e) => e.steps.length >= 3).map((e) => ({ problem: e.problem, steps: [...e.steps, e.answer] })),
-)
+const puzzlesOf = (lessons: Lesson[]) =>
+  lessons.flatMap((l) => l.examples.filter((e) => e.steps.length >= 3).map((e) => ({ problem: e.problem, steps: [...e.steps, e.answer] })))
+type Puzzle = ReturnType<typeof puzzlesOf>[number]
 const ROUND = 4
 
-export function EquationPuzzle({ onFinish, best }: GameProps) {
+export function EquationPuzzle(props: GameProps) {
+  const { lessons } = useContent()
+  const pool = useMemo(() => puzzlesOf(lessons), [lessons])
+  if (pool.length < ROUND) return <NotEnoughContent what="worked examples" />
+  return <Puzzles {...props} pool={pool} />
+}
+
+function Puzzles({ onFinish, best, pool }: GameProps & { pool: Puzzle[] }) {
   const [seed, setSeed] = useState(0)
-  const set = useMemo(() => shuffle(puzzles).slice(0, ROUND), [seed])
+  const set = useMemo(() => shuffle(pool).slice(0, ROUND), [seed, pool])
   const [i, setI] = useState(0)
   const [placed, setPlaced] = useState<number[]>([])
   const [solved, setSolved] = useState(0)
