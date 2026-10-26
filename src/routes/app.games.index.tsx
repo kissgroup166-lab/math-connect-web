@@ -14,15 +14,15 @@ function Games() {
   return (
     <>
       <PageHeader title="Games" description="Five quick ways to drill the formulas. Your best score for each game is saved." />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {games.map((g) => (
           <Link
             key={g.id}
             to="/app/games/$gameId"
             params={{ gameId: g.id }}
-            className="group flex flex-col rounded-2xl border bg-card p-6 transition-shadow hover:shadow-md motion-reduce:transition-none"
+            className="group lift flex flex-col rounded-2xl border bg-card p-6"
           >
-            <span className="grid size-12 place-items-center rounded-xl bg-primary text-highlight">
+            <span className="grid size-12 place-items-center rounded-xl bg-primary text-highlight transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110 motion-reduce:transition-none">
               <g.icon className="size-6" />
             </span>
             <h2 className="mt-4 font-display text-lg font-bold">{g.name}</h2>

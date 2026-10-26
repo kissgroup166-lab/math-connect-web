@@ -50,7 +50,7 @@ function Home() {
     <>
       <PageHeader title={`Hi, ${viewer.name.split(' ')[0]}`} description="Here’s where you left off." />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={BookOpen} label="Lessons completed" value={`${done}/${lessons.length}`} sub="Across all three topics" pct={(done / lessons.length) * 100} />
         <StatCard icon={Trophy} label="Quiz questions mastered" value={`${correct}/${questions.length}`} sub="Answered correctly at least once" pct={(correct / questions.length) * 100} />
         <StatCard icon={FolderOpen} label="Uploads in review" value={String(pendingUploads)} sub={`${mySubmissions.length} submitted in total`} />

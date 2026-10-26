@@ -64,12 +64,12 @@ function Overview() {
   return (
     <>
       <PageHeader title={`Welcome, ${viewer.name}`} description="Manage uploads, users, and everything students learn from." />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
           <Link
             key={c.to}
             to={c.to}
-            className="group flex flex-col rounded-2xl border bg-card p-6 transition-shadow hover:shadow-md motion-reduce:transition-none"
+            className="group lift flex flex-col rounded-2xl border bg-card p-6"
           >
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-muted-foreground">{c.label}</p>

@@ -27,11 +27,11 @@ function Example({ ex, n }: { ex: WorkedExample; n: number }) {
       <p className="mt-1 font-medium">{ex.problem}</p>
       <ol className="math mt-3 space-y-1.5 text-sm">
         {ex.steps.slice(0, shown).map((s, i) => (
-          <li key={i} className="rounded-md bg-muted px-3 py-1.5">
+          <li key={i} className="animate-rise rounded-md bg-muted px-3 py-1.5">
             {s}
           </li>
         ))}
-        {shown > ex.steps.length - 1 && <li className="rounded-md bg-success/15 px-3 py-1.5 font-semibold text-success">∴ {ex.answer}</li>}
+        {shown > ex.steps.length - 1 && <li className="animate-pop rounded-md bg-success/15 px-3 py-1.5 font-semibold text-success">∴ {ex.answer}</li>}
       </ol>
       {shown <= ex.steps.length - 1 ? (
         <Button size="sm" variant="outline" className="mt-3" onClick={() => setShown((s) => s + 1)}>
@@ -71,12 +71,12 @@ function Practice({ item, n }: { item: PracticeItem; n: number }) {
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-3 text-sm" aria-live="polite">
         {result === 'right' && (
-          <span className="flex items-center gap-1 font-medium text-success">
+          <span className="flex animate-pop items-center gap-1 font-medium text-success">
             <Check className="size-4" /> Correct
           </span>
         )}
         {result === 'wrong' && (
-          <span className="flex items-center gap-1 font-medium text-destructive">
+          <span className="flex animate-shake items-center gap-1 font-medium text-destructive">
             <X className="size-4" /> Not quite. Expected <span className="math">{item.answer}</span>
           </span>
         )}
@@ -85,7 +85,7 @@ function Practice({ item, n }: { item: PracticeItem; n: number }) {
             <Lightbulb className="size-3.5" /> Hint
           </button>
         ) : (
-          <span className="text-muted-foreground">💡 {item.hint}</span>
+          <span className="animate-rise text-muted-foreground">💡 {item.hint}</span>
         )}
       </div>
     </form>

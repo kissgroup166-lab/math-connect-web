@@ -127,7 +127,7 @@ function SubmissionsPanel({ items }: { items: Submission[] }) {
 
   return (
     <>
-      <div className="mb-4 grid grid-cols-3 gap-3">
+      <div className="stagger mb-4 grid grid-cols-3 gap-3">
         {(Object.keys(queues) as (keyof typeof queues)[]).map((k) => (
           <button
             key={k}

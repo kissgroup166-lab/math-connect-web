@@ -79,13 +79,19 @@ function Memory({ onFinish, best, pool }: GameProps & { pool: FormulaPair[] }) {
               onClick={() => flip(idx)}
               aria-label={faceUp ? c.text : 'Hidden card'}
               className={cn(
-                'grid min-h-28 place-items-center rounded-xl border p-3 text-center text-xs transition-colors motion-reduce:transition-none',
-                faceUp ? 'bg-card' : 'graph-paper bg-primary text-primary-foreground hover:bg-primary/90',
-                found.includes(c.pair) && 'border-success bg-success/10',
+                'grid min-h-28 place-items-center rounded-xl border p-3 text-center text-xs transition-[color,background-color,transform] motion-reduce:transition-none',
+                faceUp ? 'bg-card' : 'graph-paper bg-primary text-primary-foreground hover:-translate-y-0.5 hover:bg-primary/90',
+                found.includes(c.pair) && 'animate-pop border-success bg-success/10',
                 c.math && faceUp && 'math text-sm',
               )}
             >
-              {faceUp ? c.text : <span className="font-display text-2xl font-bold text-highlight">Σ</span>}
+              {faceUp ? (
+                <span key="up" className="animate-in zoom-in-90 fade-in duration-200 motion-reduce:animate-none">
+                  {c.text}
+                </span>
+              ) : (
+                <span className="font-display text-2xl font-bold text-highlight">Σ</span>
+              )}
             </button>
           )
         })}

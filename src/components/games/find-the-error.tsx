@@ -70,8 +70,8 @@ function Round({ onFinish, best, pool }: GameProps & { pool: ErrorItem[] }) {
               className={cn(
                 'math w-full rounded-xl border bg-card px-4 py-3 text-left text-sm',
                 picked === null && 'hover:border-primary',
-                picked !== null && k === it.wrong && 'border-destructive bg-destructive/10',
-                picked === k && k !== it.wrong && 'border-chart-2 bg-accent',
+                picked !== null && k === it.wrong && (picked === k ? 'animate-pop border-destructive bg-destructive/10' : 'border-destructive bg-destructive/10'),
+                picked === k && k !== it.wrong && 'animate-shake border-chart-2 bg-accent',
               )}
             >
               <span className="mr-3 text-muted-foreground">{k + 1}</span>

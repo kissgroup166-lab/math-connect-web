@@ -37,8 +37,8 @@ export function NotEnoughContent({ what }: { what: string }) {
 
 export function GameOver({ title, detail, best, onRetry }: { title: string; detail: string; best?: number; onRetry: () => void }) {
   return (
-    <div className="mx-auto max-w-md rounded-2xl border bg-card p-8 text-center" role="status">
-      <Trophy className="mx-auto size-12 text-highlight" />
+    <div className="mx-auto max-w-md animate-rise rounded-2xl border bg-card p-8 text-center" role="status">
+      <Trophy className="mx-auto size-12 animate-float text-highlight" />
       <h2 className="mt-4 font-display text-3xl font-bold">{title}</h2>
       <p className="mt-1 text-muted-foreground">{detail}</p>
       {best !== undefined && <p className="mt-1 text-sm text-muted-foreground">Best: {best}</p>}

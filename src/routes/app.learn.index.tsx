@@ -27,7 +27,7 @@ function Learn() {
               {t.name}
             </h2>
             <p className="text-sm text-muted-foreground">{t.blurb}</p>
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <div className="stagger mt-4 grid gap-4 md:grid-cols-3">
               {lessons
                 .filter((l) => l.topic === t.id)
                 .map((l) => {
@@ -37,7 +37,7 @@ function Learn() {
                       key={l.id}
                       to="/app/learn/$lessonId"
                       params={{ lessonId: l.id }}
-                      className="flex flex-col rounded-2xl border bg-card p-5 transition-shadow hover:shadow-md motion-reduce:transition-none"
+                      className="lift flex flex-col rounded-2xl border bg-card p-5"
                     >
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span className="rounded-full bg-secondary px-2 py-0.5 font-medium text-secondary-foreground">{l.level}</span>

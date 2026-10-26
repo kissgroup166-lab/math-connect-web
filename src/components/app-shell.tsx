@@ -74,7 +74,7 @@ export function Logo({ className }: { className?: string }) {
 }
 
 const linkClass =
-  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground motion-reduce:transition-none'
+  'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground motion-reduce:transition-none'
 const activeClass = 'bg-sidebar-accent text-sidebar-accent-foreground [&>svg]:text-sidebar-primary'
 
 function AdminNavLinks({ onNavigate }: { onNavigate?: () => void }) {
@@ -92,7 +92,7 @@ function AdminNavLinks({ onNavigate }: { onNavigate?: () => void }) {
               className={linkClass}
               activeProps={{ className: activeClass }}
             >
-              <item.icon className="size-4" />
+              <item.icon className="size-4 transition-transform group-hover:scale-110 motion-reduce:transition-none" />
               {item.label}
             </Link>
           ))}
@@ -118,7 +118,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           className={linkClass}
           activeProps={{ className: activeClass }}
         >
-          <item.icon className="size-4" />
+          <item.icon className="size-4 transition-transform group-hover:scale-110 motion-reduce:transition-none" />
           {item.label}
         </Link>
       ))}
@@ -239,6 +239,8 @@ function NavProgress() {
 
 export function AppShell({ viewer, children }: { viewer: Viewer; children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  // Keyed on the path so each page change replays a short entrance.
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[16rem_1fr]">
       <NavProgress />
@@ -263,7 +265,9 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
           </Sheet>
           <TopicSearch />
         </header>
-        <main className="mx-auto w-full max-w-content px-4 py-8 sm:px-6">{children}</main>
+        <main key={pathname} className="mx-auto w-full max-w-content animate-rise px-4 py-8 sm:px-6">
+          {children}
+        </main>
       </div>
     </div>
   )

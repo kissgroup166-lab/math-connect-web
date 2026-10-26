@@ -121,7 +121,7 @@ export function MathChallenge({ onFinish, best }: GameProps) {
         <span className="math font-semibold">{score} pts</span>
       </div>
       <div
-        className={`math mt-6 rounded-2xl border bg-card py-12 text-4xl font-semibold transition-colors motion-reduce:transition-none ${flash === 'right' ? 'border-success bg-success/10' : flash === 'wrong' ? 'border-destructive bg-destructive/10' : ''}`}
+        className={`math mt-6 rounded-2xl border bg-card py-12 text-4xl font-semibold transition-colors motion-reduce:transition-none ${flash === 'right' ? 'animate-pop border-success bg-success/10' : flash === 'wrong' ? 'animate-shake border-destructive bg-destructive/10' : ''}`}
       >
         {problem?.prompt}
       </div>

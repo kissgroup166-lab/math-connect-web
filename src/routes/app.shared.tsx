@@ -64,7 +64,7 @@ function Shared() {
                   <FolderOpen className="size-4" /> No approved materials yet.
                 </p>
               ) : (
-                <ul className="mt-3 grid gap-3 md:grid-cols-2">
+                <ul className="stagger mt-3 grid gap-3 md:grid-cols-2">
                   {files.map((f) => (
                     <li key={f.id} className="flex items-center gap-3 rounded-xl bg-muted p-3">
                       <FileText className="size-8 shrink-0 text-destructive" />

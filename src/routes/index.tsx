@@ -84,11 +84,11 @@ function Landing() {
     <div className="min-h-screen bg-background">
       <header className="mx-auto flex max-w-content items-center justify-between px-4 py-5 sm:px-6">
         <Logo />
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" asChild>
+        <div className="flex items-center gap-1 sm:gap-2">
+          <Button variant="ghost" className="px-3 sm:px-4" asChild>
             <Link to="/login">Log in</Link>
           </Button>
-          <Button asChild>
+          <Button className="px-3 sm:px-4" asChild>
             <Link to="/signup">Create account</Link>
           </Button>
         </div>
@@ -99,24 +99,35 @@ function Landing() {
           aria-hidden
           className="pointer-events-none absolute inset-0 select-none"
         >
-          {floatingEquations.map((e) => (
+          {floatingEquations.map((e, i) => (
             <span
               key={e.text}
               className={`math absolute font-semibold whitespace-nowrap ${e.className}`}
             >
-              {e.text}
+              {/* Inner span drifts so it doesn't fight the outer rotation. */}
+              <span
+                className="inline-block animate-float"
+                style={{
+                  animationDelay: `${i * -0.9}s`,
+                  animationDuration: `${6 + (i % 4)}s`,
+                }}
+              >
+                {e.text}
+              </span>
             </span>
           ))}
         </div>
 
         <div className="relative mx-auto grid max-w-content items-center gap-12 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-[1.1fr_1fr]">
-          <div>
+          <div className="stagger">
             <p className="mb-5 inline-flex items-center gap-2 rounded-full border-2 border-highlight bg-highlight/15 px-3 py-1 text-xs font-semibold text-highlight">
               <BadgeCheck className="size-3.5" /> {lessons.length} lessons · 3
               focused topics · 100% free
             </p>
             <h1 className="font-display leading-[0.95] font-extrabold tracking-tight">
-              <span className="block text-6xl md:text-7xl">MathConnect</span>
+              <span className="block text-5xl sm:text-6xl md:text-7xl">
+                MathConnect
+              </span>
               <span className="mt-4 inline-block -rotate-2 rounded-xl border-2 border-primary-foreground bg-highlight px-4 py-1 text-4xl text-primary shadow-[5px_5px_0_0_var(--primary-foreground)] md:text-5xl">
                 Learn for free
               </span>
@@ -133,8 +144,9 @@ function Landing() {
                 className="border-2 border-primary-foreground bg-highlight text-primary hover:bg-highlight/90"
                 asChild
               >
-                <Link to="/signup">
-                  Start learning free <ArrowRight />
+                <Link to="/signup" className="group">
+                  Start learning free{' '}
+                  <ArrowRight className="transition-transform group-hover:translate-x-1 motion-reduce:transition-none" />
                 </Link>
               </Button>
               <Button
@@ -148,12 +160,12 @@ function Landing() {
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-md">
+          <div className="relative mx-auto w-[calc(100%-1.5rem)] max-w-md animate-rise [animation-delay:200ms] sm:w-full">
             <div
               className="absolute -inset-3 rotate-2 rounded-3xl border-2 border-dashed border-highlight"
               aria-hidden
             />
-            <div className="relative space-y-3 rounded-2xl border-2 border-highlight bg-card p-6 text-card-foreground shadow-[8px_8px_0_0_var(--highlight)]">
+            <div className="stagger relative space-y-3 rounded-2xl border-2 border-highlight bg-card p-6 text-card-foreground shadow-[8px_8px_0_0_var(--highlight)]">
               <p className="flex items-center gap-2 font-display text-sm font-bold text-primary">
                 <span className="size-2.5 rounded-full bg-highlight ring-2 ring-primary" />{' '}
                 Formula sheet
@@ -167,7 +179,7 @@ function Landing() {
               ].map((f, i) => (
                 <div
                   key={f}
-                  className="math flex items-center justify-between rounded-lg border-2 border-primary/20 border-l-primary bg-secondary px-4 py-3 text-sm"
+                  className="math flex items-center justify-between rounded-lg border-2 border-primary/20 border-l-primary bg-secondary px-4 py-3 text-sm transition-transform hover:translate-x-1 motion-reduce:transition-none"
                   style={{ marginLeft: `${(i % 3) * 12}px` }}
                 >
                   {f}
@@ -188,7 +200,7 @@ function Landing() {
             nothing else
           </span>
         </h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="stagger mt-6 grid gap-4 md:grid-cols-3">
           {topics.map((t, i) => (
             <Link
               key={t.id}
@@ -207,10 +219,10 @@ function Landing() {
           ))}
         </div>
 
-        <div className="mt-16 grid gap-6 sm:grid-cols-2">
+        <div className="stagger mt-16 grid gap-6 sm:grid-cols-2">
           {features.map((f) => (
-            <div key={f.title} className="flex gap-4">
-              <span className="grid size-11 shrink-0 place-items-center rounded-xl border-2 border-primary bg-highlight text-primary">
+            <div key={f.title} className="group flex gap-4">
+              <span className="grid size-11 shrink-0 place-items-center rounded-xl border-2 border-primary bg-highlight text-primary transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110 motion-reduce:transition-none">
                 <f.icon className="size-5" />
               </span>
               <div>

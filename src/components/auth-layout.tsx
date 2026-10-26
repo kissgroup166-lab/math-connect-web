@@ -19,7 +19,7 @@ export function AuthLayout({
         <Link to="/" className="mb-8 flex justify-center">
           <Logo />
         </Link>
-        <div className="outline-pop rounded-2xl bg-card p-6 sm:p-8">
+        <div className="outline-pop animate-rise rounded-2xl bg-card p-6 sm:p-8">
           <h1 className="font-display text-2xl font-bold">{title}</h1>
           <p className="mt-1 mb-6 text-sm text-muted-foreground">{subtitle}</p>
           {children}

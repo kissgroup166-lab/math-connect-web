@@ -88,7 +88,7 @@ function Puzzles({ onFinish, best, pool }: GameProps & { pool: Puzzle[] }) {
             <button
               key={k}
               onClick={() => place(k)}
-              className={cn('math rounded-xl border bg-card px-4 py-2.5 text-left text-sm hover:border-primary', wrong === k && 'border-destructive bg-destructive/10')}
+              className={cn('math rounded-xl border bg-card px-4 py-2.5 text-left text-sm hover:border-primary', wrong === k && 'animate-shake border-destructive bg-destructive/10')}
             >
               {p.steps[k]}
             </button>

@@ -64,7 +64,7 @@ function Match({ onFinish, best, pool }: GameProps & { pool: FormulaPair[] }) {
               <button
                 disabled={matched.includes(p.id)}
                 onClick={() => setSelected(p.id)}
-                className={cn(tile, selected === p.id && 'border-primary bg-secondary', matched.includes(p.id) && 'border-success bg-success/10 opacity-60')}
+                className={cn(tile, selected === p.id && 'border-primary bg-secondary', matched.includes(p.id) && 'animate-pop border-success bg-success/10 opacity-60')}
               >
                 {p.label}
               </button>
@@ -77,7 +77,7 @@ function Match({ onFinish, best, pool }: GameProps & { pool: FormulaPair[] }) {
               <button
                 disabled={matched.includes(p.id)}
                 onClick={() => pickRight(p.id)}
-                className={cn(tile, 'math', !selected && 'cursor-default', miss === p.id && 'border-destructive bg-destructive/10', matched.includes(p.id) && 'border-success bg-success/10 opacity-60')}
+                className={cn(tile, 'math', !selected && 'cursor-default', miss === p.id && 'animate-shake border-destructive bg-destructive/10', matched.includes(p.id) && 'animate-pop border-success bg-success/10 opacity-60')}
               >
                 {p.expr}
               </button>

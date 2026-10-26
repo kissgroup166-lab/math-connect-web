@@ -89,7 +89,7 @@ function Quizzes() {
         title="Quizzes"
         description="Instant feedback with explanations. Your scores are saved to your account, and an unfinished quiz picks up where you left off."
       />
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="stagger grid gap-4 md:grid-cols-2">
         {quizzes.map((q) => {
           const set = setFor(q.key)
           const best = progress.quizBest[q.key]
@@ -104,7 +104,9 @@ function Quizzes() {
                   </p>
                 </div>
                 {best !== undefined && (
-                  <span className={cn('math rounded-full px-2.5 py-1 text-xs font-semibold', best >= PASS_MARK * 100 ? 'bg-success/15 text-success' : 'bg-muted')}>
+                  <span
+                    className={cn('math rounded-full px-2.5 py-1 text-xs font-semibold', best >= PASS_MARK * 100 ? 'bg-success/15 text-success' : 'bg-muted')}
+                  >
                     Best {best}%
                   </span>
                 )}
@@ -166,7 +168,11 @@ function QuizRunner({
   function choose(original: number) {
     if (answered) return
     const right = original === q.answer
-    const next = { ...run, picked: original, score: run.score + (right ? 1 : 0) }
+    const next = {
+      ...run,
+      picked: original,
+      score: run.score + (right ? 1 : 0),
+    }
     setRun(next)
     update((p) => ({
       ...p,
@@ -184,8 +190,14 @@ function QuizRunner({
       return {
         ...p,
         quizRuns,
-        quizBest: { ...p.quizBest, [quizKey]: Math.max(pct, p.quizBest[quizKey] ?? 0) },
-        quizAttempts: { ...p.quizAttempts, [quizKey]: (p.quizAttempts[quizKey] ?? 0) + 1 },
+        quizBest: {
+          ...p.quizBest,
+          [quizKey]: Math.max(pct, p.quizBest[quizKey] ?? 0),
+        },
+        quizAttempts: {
+          ...p.quizAttempts,
+          [quizKey]: (p.quizAttempts[quizKey] ?? 0) + 1,
+        },
       }
     })
     setDone({ score: run.score, total })
@@ -200,9 +212,9 @@ function QuizRunner({
     const pct = Math.round((done.score / done.total) * 100)
     const passed = pct >= PASS_MARK * 100
     return (
-      <div className="mx-auto max-w-lg rounded-2xl border bg-card p-8 text-center">
-        <Trophy className={cn('mx-auto size-12', passed ? 'text-highlight' : 'text-muted-foreground')} />
-        <h1 className="mt-4 font-display text-3xl font-bold">{pct}%</h1>
+      <div className="mx-auto max-w-lg animate-rise rounded-2xl border bg-card p-8 text-center">
+        <Trophy className={cn('mx-auto size-12', passed ? 'animate-float text-highlight' : 'text-muted-foreground')} />
+        <h1 className="mt-4 animate-pop font-display text-3xl font-bold [animation-delay:150ms]">{pct}%</h1>
         <p className="mt-1 text-muted-foreground">
           {done.score} of {done.total} correct · {passed ? 'Passed!' : `${PASS_MARK * 100}% needed to pass`}
         </p>
@@ -242,43 +254,46 @@ function QuizRunner({
         </p>
       )}
       <Progress value={(run.i / total) * 100} className="mb-8 h-1.5 bg-muted" />
-      <h1 className="math text-xl font-semibold">{q.prompt}</h1>
-      <div className="mt-6 grid gap-3" role="radiogroup" aria-label="Answer choices">
-        {order.map((original) => {
-          const isRight = answered && original === q.answer
-          const isWrong = answered && original === run.picked && original !== q.answer
-          return (
-            <button
-              key={original}
-              role="radio"
-              aria-checked={run.picked === original}
-              disabled={answered}
-              onClick={() => choose(original)}
-              className={cn(
-                'math flex items-center justify-between rounded-xl border bg-card px-4 py-3 text-left transition-colors motion-reduce:transition-none',
-                !answered && 'hover:border-primary hover:bg-secondary',
-                isRight && 'border-success bg-success/10',
-                isWrong && 'border-destructive bg-destructive/10',
-              )}
-            >
-              {q.choices[original]}
-              {isRight && <Check className="size-4 text-success" />}
-              {isWrong && <X className="size-4 text-destructive" />}
-            </button>
-          )
-        })}
-      </div>
-      {answered && (
-        <div className="mt-6 rounded-xl bg-muted p-4" aria-live="polite">
-          <p className={cn('font-semibold', run.picked === q.answer ? 'text-success' : 'text-destructive')}>
-            {run.picked === q.answer ? 'Correct!' : 'Not quite.'}
-          </p>
-          <p className="mt-1 text-sm">{q.explanation}</p>
-          <Button className="mt-4" onClick={next}>
-            {run.i + 1 < total ? 'Next question' : 'See results'}
-          </Button>
+      {/* Keyed on the question so each new question slides in. */}
+      <div key={q.id} className="animate-rise">
+        <h1 className="math text-xl font-semibold">{q.prompt}</h1>
+        <div className="mt-6 grid gap-3" role="radiogroup" aria-label="Answer choices">
+          {order.map((original) => {
+            const isRight = answered && original === q.answer
+            const isWrong = answered && original === run.picked && original !== q.answer
+            return (
+              <button
+                key={original}
+                role="radio"
+                aria-checked={run.picked === original}
+                disabled={answered}
+                onClick={() => choose(original)}
+                className={cn(
+                  'math flex items-center justify-between rounded-xl border bg-card px-4 py-3 text-left transition-colors motion-reduce:transition-none',
+                  !answered && 'hover:border-primary hover:bg-secondary',
+                  isRight && 'animate-pop border-success bg-success/10',
+                  isWrong && 'animate-shake border-destructive bg-destructive/10',
+                )}
+              >
+                {q.choices[original]}
+                {isRight && <Check className="size-4 text-success animate-in zoom-in-50 motion-reduce:animate-none" />}
+                {isWrong && <X className="size-4 text-destructive animate-in zoom-in-50 motion-reduce:animate-none" />}
+              </button>
+            )
+          })}
         </div>
-      )}
+        {answered && (
+          <div className="mt-6 animate-rise rounded-xl bg-muted p-4" aria-live="polite">
+            <p className={cn('font-semibold', run.picked === q.answer ? 'text-success' : 'text-destructive')}>
+              {run.picked === q.answer ? 'Correct!' : 'Not quite.'}
+            </p>
+            <p className="mt-1 text-sm">{q.explanation}</p>
+            <Button className="mt-4" onClick={next}>
+              {run.i + 1 < total ? 'Next question' : 'See results'}
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
