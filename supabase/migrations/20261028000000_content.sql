@@ -1,8 +1,9 @@
+-- Safe to run more than once: existing tables, rows, triggers, and policies are kept or replaced, never dropped with data.
 -- Course content the admin edits from the dashboard: topics, lessons, quiz questions, and
 -- Find the Error game items. Everyone (signed in or not) reads published rows; only the
 -- admin writes. Seeded below from the content that used to live in src/data.
 
-create function public.touch_updated_at()
+create or replace function public.touch_updated_at()
 returns trigger
 language plpgsql
 set search_path = ''
@@ -14,7 +15,7 @@ end;
 $$;
 
 -- The site covers exactly these three topics, so topics can be renamed but not added.
-create table public.topics (
+create table if not exists public.topics (
   id text primary key check (id in ('trig', 'exp', 'log')),
   name text not null check (char_length(name) between 1 and 80),
   short text not null check (char_length(short) between 1 and 30),
@@ -23,7 +24,7 @@ create table public.topics (
   updated_at timestamptz not null default now()
 );
 
-create table public.lessons (
+create table if not exists public.lessons (
   id text primary key check (id ~ '^[a-z0-9]+(-[a-z0-9]+)*$' and char_length(id) <= 80),
   topic_id text not null references public.topics (id),
   title text not null check (char_length(title) between 1 and 120),
@@ -40,7 +41,7 @@ create table public.lessons (
   updated_at timestamptz not null default now()
 );
 
-create table public.questions (
+create table if not exists public.questions (
   id text primary key default gen_random_uuid()::text,
   lesson_id text not null references public.lessons (id) on delete cascade,
   prompt text not null check (char_length(prompt) between 1 and 500),
@@ -53,7 +54,7 @@ create table public.questions (
   check (answer < jsonb_array_length(choices))
 );
 
-create table public.error_items (
+create table if not exists public.error_items (
   id text primary key default gen_random_uuid()::text,
   topic_id text references public.topics (id),
   problem text not null check (char_length(problem) between 1 and 300),
@@ -66,11 +67,15 @@ create table public.error_items (
   check (wrong < jsonb_array_length(steps))
 );
 
-create index questions_lesson_idx on public.questions (lesson_id);
+create index if not exists questions_lesson_idx on public.questions (lesson_id);
 
+drop trigger if exists topics_touch on public.topics;
 create trigger topics_touch before update on public.topics for each row execute function public.touch_updated_at();
+drop trigger if exists lessons_touch on public.lessons;
 create trigger lessons_touch before update on public.lessons for each row execute function public.touch_updated_at();
+drop trigger if exists questions_touch on public.questions;
 create trigger questions_touch before update on public.questions for each row execute function public.touch_updated_at();
+drop trigger if exists error_items_touch on public.error_items;
 create trigger error_items_touch before update on public.error_items for each row execute function public.touch_updated_at();
 
 alter table public.topics enable row level security;
@@ -78,21 +83,29 @@ alter table public.lessons enable row level security;
 alter table public.questions enable row level security;
 alter table public.error_items enable row level security;
 
+drop policy if exists "Anyone reads topics" on public.topics;
 create policy "Anyone reads topics" on public.topics for select to anon, authenticated using (true);
+drop policy if exists "Admin updates topics" on public.topics;
 create policy "Admin updates topics" on public.topics for update to authenticated using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "Anyone reads published lessons, admin reads all" on public.lessons;
 create policy "Anyone reads published lessons, admin reads all" on public.lessons
   for select to anon, authenticated using (published or public.is_admin());
+drop policy if exists "Admin writes lessons" on public.lessons;
 create policy "Admin writes lessons" on public.lessons
   for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "Anyone reads published questions, admin reads all" on public.questions;
 create policy "Anyone reads published questions, admin reads all" on public.questions
   for select to anon, authenticated using (published or public.is_admin());
+drop policy if exists "Admin writes questions" on public.questions;
 create policy "Admin writes questions" on public.questions
   for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "Anyone reads published error items, admin reads all" on public.error_items;
 create policy "Anyone reads published error items, admin reads all" on public.error_items
   for select to anon, authenticated using (published or public.is_admin());
+drop policy if exists "Admin writes error items" on public.error_items;
 create policy "Admin writes error items" on public.error_items
   for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
@@ -207,5 +220,6 @@ on conflict (id) do nothing;
 
 -- A lesson with uploaded PDFs can be hidden but not deleted. NOT VALID skips checking
 -- rows from before this migration; new uploads must name an existing lesson.
+alter table public.submissions drop constraint if exists submissions_lesson_fk;
 alter table public.submissions
   add constraint submissions_lesson_fk foreign key (lesson_id) references public.lessons (id) on delete restrict not valid;
