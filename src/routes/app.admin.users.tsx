@@ -31,9 +31,63 @@ function UsersPanel({ list }: { list: AppUser[] }) {
     }
   }
 
+  const role = (u: AppUser) =>
+    u.role === 'admin' ? (
+      <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
+        <ShieldCheck className="size-4" /> Admin (owner)
+      </span>
+    ) : (
+      <Select
+        value={u.role}
+        onValueChange={(v) =>
+          patch(u, {
+            role: v as AppUser['role'],
+            canPublish: false,
+          })
+        }
+      >
+        <SelectTrigger size="sm" className="w-32" aria-label={`Role for ${u.name}`}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="student">Student</SelectItem>
+          <SelectItem value="teacher">Teacher</SelectItem>
+        </SelectContent>
+      </Select>
+    )
+  const verified = (u: AppUser) =>
+    u.role === 'teacher' ? (
+      <Switch checked={!!u.canPublish} onCheckedChange={(c) => patch(u, { canPublish: c })} aria-label={`Teacher permissions for ${u.name}`} />
+    ) : (
+      <span className="text-xs text-muted-foreground">—</span>
+    )
+
   return (
     <div className="rounded-2xl border bg-card">
-      <Table>
+      {/* Phones get one card per user; the table needs more width than they have. */}
+      <ul className="divide-y md:hidden">
+        {list.map((u) => (
+          <li key={u.id} className="space-y-3 p-4">
+            <div className="min-w-0">
+              <p className="truncate font-medium">{u.name}</p>
+              <p className="truncate text-xs text-muted-foreground">{u.email}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+              {role(u)}
+              {u.role === 'teacher' && (
+                <label className="flex items-center gap-2">
+                  {verified(u)}
+                  <span className="text-xs text-muted-foreground">Verified</span>
+                </label>
+              )}
+              <span className="ml-auto text-xs text-muted-foreground">
+                <span className="math">{u.uploads}</span> uploads
+              </span>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <Table className="hidden md:table">
         <TableHeader>
           <TableRow>
             <TableHead>User</TableHead>
@@ -49,42 +103,8 @@ function UsersPanel({ list }: { list: AppUser[] }) {
                 <p className="font-medium">{u.name}</p>
                 <p className="text-xs text-muted-foreground">{u.email}</p>
               </TableCell>
-              <TableCell>
-                {u.role === 'admin' ? (
-                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
-                    <ShieldCheck className="size-4" /> Admin (owner)
-                  </span>
-                ) : (
-                  <Select
-                    value={u.role}
-                    onValueChange={(v) =>
-                      patch(u, {
-                        role: v as AppUser['role'],
-                        canPublish: false,
-                      })
-                    }
-                  >
-                    <SelectTrigger size="sm" className="w-32" aria-label={`Role for ${u.name}`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="student">Student</SelectItem>
-                      <SelectItem value="teacher">Teacher</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              </TableCell>
-              <TableCell>
-                {u.role === 'teacher' ? (
-                  <Switch
-                    checked={!!u.canPublish}
-                    onCheckedChange={(c) => patch(u, { canPublish: c })}
-                    aria-label={`Teacher permissions for ${u.name}`}
-                  />
-                ) : (
-                  <span className="text-xs text-muted-foreground">—</span>
-                )}
-              </TableCell>
+              <TableCell>{role(u)}</TableCell>
+              <TableCell>{verified(u)}</TableCell>
               <TableCell className="math text-right">{u.uploads}</TableCell>
             </TableRow>
           ))}

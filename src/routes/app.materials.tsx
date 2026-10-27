@@ -238,7 +238,7 @@ function MyMaterials() {
   return (
     <>
       <PageHeader title="My Materials" description="Upload PDFs for a lesson and track each one from review to approval." />
-      <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.5fr_1fr]">
         <UploadCard onUploaded={() => router.invalidate()} />
         <ScoreGuide />
       </div>

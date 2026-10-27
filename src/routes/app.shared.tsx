@@ -36,7 +36,7 @@ function Shared() {
         }
       />
       <Tabs value={topic} onValueChange={(v) => setTopic(v as TopicId | 'all')} className="mb-6">
-        <TabsList>
+        <TabsList className="h-auto max-w-full flex-wrap">
           <TabsTrigger value="all">All topics</TabsTrigger>
           {topics.map((t) => (
             <TabsTrigger key={t.id} value={t.id}>

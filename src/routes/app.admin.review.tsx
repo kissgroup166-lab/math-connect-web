@@ -42,7 +42,8 @@ function ReviewDialog({
   const lesson = s ? getLesson(s.lessonId) : undefined
   return (
     <Dialog open={!!s} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-2xl">
+      {/* Capped to the screen with a scrolling middle, so Approve and Reject stay reachable on phones. */}
+      <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-2xl">
         {s && (
           <>
             <DialogHeader>
@@ -51,9 +52,13 @@ function ReviewDialog({
                 {s.ownerName} ({s.ownerRole}) · {lesson ? `${getTopic(lesson.topic).name} → ${lesson.title}` : 'Hidden lesson'}
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 md:grid-cols-[12rem_1fr]">
+            <div className="-mx-1 grid min-h-0 gap-4 overflow-y-auto px-1 md:grid-cols-[12rem_1fr]">
               <div className="flex flex-col gap-2">
-                <iframe src={fileUrl(s.id)} title={`Preview of ${s.fileName}`} className="aspect-[3/4] w-full rounded-xl border bg-muted" />
+                <iframe
+                  src={fileUrl(s.id)}
+                  title={`Preview of ${s.fileName}`}
+                  className="aspect-[3/4] max-h-[40dvh] w-full rounded-xl border bg-muted md:max-h-none"
+                />
                 <a
                   href={fileUrl(s.id)}
                   target="_blank"
@@ -141,7 +146,28 @@ function SubmissionsPanel({ items }: { items: Submission[] }) {
         ))}
       </div>
       <div className="rounded-2xl border bg-card">
-        <Table>
+        {/* Below xl the table is wider than the screen and hides the Review button, so show cards. */}
+        <ul className="divide-y xl:hidden">
+          {shown.length === 0 && <li className="py-10 text-center text-sm text-muted-foreground">Nothing in this queue.</li>}
+          {shown.map((s) => (
+            <li key={s.id} className="space-y-3 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <FileLink s={s} className="block truncate font-medium" />
+                  <p className="truncate text-xs text-muted-foreground">
+                    {s.ownerName} · {s.ownerRole} · {getLesson(s.lessonId)?.title ?? 'Hidden lesson'}
+                  </p>
+                </div>
+                <StatusBadge status={s.status} />
+              </div>
+              <ScoreMeter score={s.score} band={s.band} />
+              <Button className="w-full" variant={queue === 'pending' ? 'default' : 'outline'} onClick={() => setReviewing(s)}>
+                <Eye /> {queue === 'pending' ? 'Review' : 'Preview'}
+              </Button>
+            </li>
+          ))}
+        </ul>
+        <Table className="hidden xl:table">
           <TableHeader>
             <TableRow>
               <TableHead>File</TableHead>

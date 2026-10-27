@@ -89,7 +89,10 @@ function Landing() {
             <Link to="/login">Log in</Link>
           </Button>
           <Button className="px-3 sm:px-4" asChild>
-            <Link to="/signup">Create account</Link>
+            <Link to="/signup">
+              <span className="sm:hidden">Sign up</span>
+              <span className="hidden sm:inline">Create account</span>
+            </Link>
           </Button>
         </div>
       </header>
@@ -125,7 +128,7 @@ function Landing() {
               focused topics · 100% free
             </p>
             <h1 className="font-display leading-[0.95] font-extrabold tracking-tight">
-              <span className="block text-5xl sm:text-6xl md:text-7xl">
+              <span className="block text-4xl min-[360px]:text-5xl sm:text-6xl md:text-7xl">
                 MathConnect
               </span>
               <span className="mt-4 inline-block -rotate-2 rounded-xl border-2 border-primary-foreground bg-highlight px-4 py-1 text-4xl text-primary shadow-[5px_5px_0_0_var(--primary-foreground)] md:text-5xl">

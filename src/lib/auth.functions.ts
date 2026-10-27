@@ -39,6 +39,11 @@ export const signIn = createServerFn({ method: 'POST' })
     const sb = getSupabase()
     const { data: auth, error } = await sb.auth.signInWithPassword(data)
     if (error) throw new Error(error.code === 'email_not_confirmed' ? 'Confirm your email first, then log in.' : 'Email or password is incorrect.')
+    // Supabase blocks this already while "Confirm email" is on; keep blocking if that setting is ever turned off.
+    if (!auth.user.email_confirmed_at) {
+      await sb.auth.signOut()
+      throw new Error('Confirm your email first, then log in.')
+    }
     // The login page sends the admin to the admin overview instead of the student home.
     const { data: profile } = await sb.from('profiles').select('role').eq('id', auth.user.id).single()
     return { role: (profile?.role ?? 'student') as Viewer['role'] }
