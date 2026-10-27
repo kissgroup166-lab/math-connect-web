@@ -13,7 +13,10 @@ const config = defineConfig(({ mode }) => {
   return {
     resolve: { tsconfigPaths: true },
     // File events don't cross a Windows bind mount into Docker, so the dev container polls (WATCH_POLL=1).
-    server: process.env.WATCH_POLL ? { watch: { usePolling: true, interval: 300 } } : undefined,
+    // Polling checks every watched file, so skip folders the app never imports from.
+    server: process.env.WATCH_POLL
+      ? { watch: { usePolling: true, interval: 300, ignored: ['**/.pnpm-store/**', '**/dist/**', '**/.netlify/**', '**/.tanstack/**'] } }
+      : undefined,
     // No edge functions here; their Deno-based dev emulation also crashes on some machines.
     plugins: [tailwindcss(), ...(forNode ? [] : [netlify({ dev: { edgeFunctions: { enabled: false } } })]), tanstackStart(), viteReact()],
   }

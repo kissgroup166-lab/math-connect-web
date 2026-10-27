@@ -17,6 +17,12 @@ services:
       TARGET: node
       WATCH_POLL: '1'
       COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+      # No terminal in the container: lets pnpm rebuild node_modules without asking first
+      # (otherwise ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY and a restart loop).
+      CI: 'true'
+      # Keep pnpm's package store in the node_modules volume. Its default put ~30k files in the
+      # project folder, which is slow over the Windows bind mount and starved Vite's file polling.
+      npm_config_store_dir: /app/node_modules/.pnpm-store
     volumes:
       - .:/app
       # Linux node_modules live in the container, separate from the Windows ones on the host.

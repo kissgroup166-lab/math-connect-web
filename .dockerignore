@@ -10,3 +10,4 @@ dist
 supabase/.temp
 coverage
 *.log
+.pnpm-store
