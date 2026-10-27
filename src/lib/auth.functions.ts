@@ -54,6 +54,8 @@ export const signUp = createServerFn({ method: 'POST' })
       options: { data: { full_name: data.name, role: data.role }, emailRedirectTo: `${siteUrl()}/auth/callback` },
     })
     if (error) throw new Error(authMessage(error))
+    // With email confirmation on, Supabase hides taken emails behind a fake success: a user with no identities.
+    if (res.user && res.user.identities?.length === 0) throw new Error('An account with this email already exists. Log in instead.')
     return { needsConfirmation: !res.session }
   })
 
