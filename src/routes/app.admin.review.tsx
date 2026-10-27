@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { AlertTriangle, Check, ExternalLink, Eye, X } from 'lucide-react'
+import { AlertTriangle, Check, ExternalLink, Eye, FileText, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/app-shell'
@@ -42,8 +42,9 @@ function ReviewDialog({
   const lesson = s ? getLesson(s.lessonId) : undefined
   return (
     <Dialog open={!!s} onOpenChange={(o) => !o && onClose()}>
-      {/* Capped to the screen with a scrolling middle, so Approve and Reject stay reachable on phones. */}
-      <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-2xl">
+      {/* Capped to the screen (svh leaves room for mobile browser bars) with a scrolling middle,
+          so Approve and Reject stay reachable on phones. */}
+      <DialogContent className="max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-2xl">
         {s && (
           <>
             <DialogHeader>
@@ -54,16 +55,19 @@ function ReviewDialog({
             </DialogHeader>
             <div className="-mx-1 grid min-h-0 gap-4 overflow-y-auto px-1 md:grid-cols-[12rem_1fr]">
               <div className="flex flex-col gap-2">
-                <iframe
-                  src={fileUrl(s.id)}
-                  title={`Preview of ${s.fileName}`}
-                  className="aspect-[3/4] max-h-[40dvh] w-full rounded-xl border bg-muted md:max-h-none"
-                />
+                {/* Phone browsers stretch embedded PDFs and trap scrolling, which hid the buttons;
+                    phones and tablets open the PDF in a new tab instead. */}
+                <iframe src={fileUrl(s.id)} title={`Preview of ${s.fileName}`} className="hidden aspect-[3/4] w-full rounded-xl border bg-muted lg:block" />
+                <Button variant="outline" className="w-full lg:hidden" asChild>
+                  <a href={fileUrl(s.id)} target="_blank" rel="noreferrer">
+                    <FileText /> Open PDF <ExternalLink className="size-3" />
+                  </a>
+                </Button>
                 <a
                   href={fileUrl(s.id)}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  className="hidden items-center gap-1 text-xs font-medium text-primary hover:underline lg:inline-flex"
                 >
                   Open full size <ExternalLink className="size-3" />
                 </a>
